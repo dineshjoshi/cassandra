@@ -18,12 +18,15 @@
 */
 package org.apache.cassandra.security;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.TrustManagerFactory;
+import javax.xml.crypto.Data;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -161,5 +164,35 @@ public class SSLFactoryTest
         EncryptionOptions options = addKeystoreOptions(encryptionOptions);
         SSLFactory.buildKeyManagerFactory(options);
         Assert.assertTrue(SSLFactory.checkedExpiry);
+    }
+
+    @Test
+    public void testSslContextReload_HappyPath() throws IOException, InterruptedException
+    {
+        boolean openSslFlag = OpenSsl.isAvailable();
+
+        try
+        {
+            EncryptionOptions options = addKeystoreOptions(encryptionOptions);
+            DatabaseDescriptor.getRawConfig().server_encryption_options.enabled = true;
+            DatabaseDescriptor.getRawConfig().server_encryption_options.keystore = options.keystore;
+
+            SslContext oldCtx = SSLFactory.getSslContext(options, true, true, openSslFlag);
+            File keystoreFile = new File(options.keystore);
+
+            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getRawConfig());
+            Thread.sleep(5000);
+            keystoreFile.setLastModified(System.currentTimeMillis());
+
+            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getRawConfig());
+            SslContext newCtx = SSLFactory.getSslContext(options, true, true, openSslFlag);
+
+            Assert.assertNotEquals(oldCtx, newCtx);
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            DatabaseDescriptor.loadConfig();
+        }
+
     }
 }

@@ -26,6 +26,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -42,6 +43,7 @@ import org.apache.cassandra.auth.IAuthenticator;
 import org.apache.cassandra.auth.IAuthorizer;
 import org.apache.cassandra.auth.IInternodeAuthenticator;
 import org.apache.cassandra.auth.IRoleManager;
+import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.Config.CommitLogSync;
 import org.apache.cassandra.config.EncryptionOptions.ServerEncryptionOptions.InternodeEncryption;
 import org.apache.cassandra.db.ConsistencyLevel;
@@ -60,6 +62,7 @@ import org.apache.cassandra.locator.SeedProvider;
 import org.apache.cassandra.net.BackPressureStrategy;
 import org.apache.cassandra.net.RateBasedBackPressure;
 import org.apache.cassandra.security.EncryptionContext;
+import org.apache.cassandra.security.SSLFactory;
 import org.apache.cassandra.service.CacheService.CacheType;
 import org.apache.cassandra.utils.FBUtilities;
 
@@ -322,6 +325,8 @@ public class DatabaseDescriptor
         applySeedProvider();
 
         applyEncryptionContext();
+
+        applySslContextHotReload();
     }
 
     private static void applySimpleConfig()
@@ -863,6 +868,11 @@ public class DatabaseDescriptor
         // always attempt to load the cipher factory, as we could be in the situation where the user has disabled encryption,
         // but has existing commitlogs and sstables on disk that are still encrypted (and still need to be read)
         encryptionContext = new EncryptionContext(conf.transparent_data_encryption_options);
+    }
+
+    public static void applySslContextHotReload()
+    {
+        SSLFactory.initHotReloading(conf);
     }
 
     public static void applySeedProvider()
