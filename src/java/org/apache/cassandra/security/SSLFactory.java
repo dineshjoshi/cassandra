@@ -101,7 +101,8 @@ public final class SSLFactory
     /**
      * Helper class for hot reloading SSL Contexts
      */
-    private static class HotReloadableFile {
+    private static class HotReloadableFile
+    {
         enum Type {
             SERVER,
             CLIENT
@@ -111,24 +112,28 @@ public final class SSLFactory
         private volatile long lastModTime;
         private final Type certType;
 
-        public HotReloadableFile(String path, Type type) {
+        public HotReloadableFile(String path, Type type)
+        {
             file = new File(path);
             lastModTime = file.lastModified();
             certType = type;
         }
 
-        public boolean shouldReload() {
+        public boolean shouldReload()
+        {
             long curModTime = file.lastModified();
             boolean result = curModTime != lastModTime;
             lastModTime = curModTime;
             return result;
         }
 
-        public boolean isServer() {
+        public boolean isServer()
+        {
             return certType == Type.SERVER;
         }
 
-        public boolean isClient() {
+        public boolean isClient()
+        {
             return certType == Type.CLIENT;
         }
     }
