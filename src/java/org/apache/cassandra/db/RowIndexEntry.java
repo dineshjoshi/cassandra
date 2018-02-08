@@ -21,6 +21,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import com.google.common.primitives.Ints;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.codahale.metrics.Histogram;
 import org.apache.cassandra.cache.IMeasurableMemory;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -126,6 +131,7 @@ import static org.apache.cassandra.metrics.CassandraMetricsRegistry.Metrics;
 public class RowIndexEntry<T> implements IMeasurableMemory
 {
     private static final long EMPTY_SIZE = ObjectSizes.measure(new RowIndexEntry(0));
+    private static final Logger logger = LoggerFactory.getLogger(RowIndexEntry.class);
 
     // constants for type of row-index-entry as serialized for saved-cache
     static final int CACHE_NOT_INDEXED = 0;
@@ -366,9 +372,19 @@ public class RowIndexEntry<T> implements IMeasurableMemory
 
     private static int serializedSize(DeletionTime deletionTime, long headerLength, int columnIndexCount)
     {
-        return TypeSizes.sizeofUnsignedVInt(headerLength)
+        long size = TypeSizes.sizeofUnsignedVInt(headerLength)
                + (int) DeletionTime.serializer.serializedSize(deletionTime)
                + TypeSizes.sizeofUnsignedVInt(columnIndexCount);
+
+        try
+        {
+            return Ints.checkedCast(size);
+        }
+        catch (IllegalArgumentException e)
+        {
+            logger.error("serializedSize integer overflow detected. Please adjust column_index_size_in_kb. See CASSANDRA-13973.", e);
+            throw e;
+        }
     }
 
     public void serialize(DataOutputPlus out, IndexInfo.Serializer idxInfoSerializer, ByteBuffer indexInfo) throws IOException
