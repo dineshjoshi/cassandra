@@ -243,7 +243,7 @@ public final class SSLFactory
         if (forServer && (sslContext = serverSslContext.get()) != null)
             return sslContext;
 
-        if (!forServer && (sslContext = serverSslContext.get()) != null)
+        if (!forServer && (sslContext = clientSslContext.get()) != null)
             return sslContext;
 
         /*
