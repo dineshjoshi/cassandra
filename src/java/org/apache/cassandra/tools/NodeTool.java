@@ -157,7 +157,7 @@ public class NodeTool
                 RelocateSSTables.class,
                 ViewBuildStatus.class,
                 HandoffWindow.class,
-                ReloadSslCerts.class
+                ReloadSslCertificates.class
         );
 
         Cli.CliBuilder<Runnable> builder = Cli.builder("nodetool");

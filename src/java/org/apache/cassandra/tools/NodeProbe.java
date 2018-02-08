@@ -1650,7 +1650,7 @@ public class NodeProbe implements AutoCloseable
 
     public void reloadSslCerts()
     {
-        msProxy.reloadSslCerts();
+        msProxy.reloadSslCertificates();
     }
 }
 

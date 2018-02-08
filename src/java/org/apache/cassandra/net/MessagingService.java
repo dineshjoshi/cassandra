@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import javax.xml.crypto.Data;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
@@ -1667,8 +1668,9 @@ public final class MessagingService implements MessagingServiceMBean
     }
 
     @Override
-    public void reloadSslCerts()
+    public void reloadSslCertificates()
     {
-        SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getRawConfig());
+        SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getServerEncryptionOptions(),
+                                                 DatabaseDescriptor.getClientEncryptionOptions());
     }
 }

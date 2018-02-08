@@ -20,17 +20,10 @@ package org.apache.cassandra.security;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.TrustManagerFactory;
-import javax.xml.crypto.Data;
 
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -180,11 +173,13 @@ public class SSLFactoryTest
             SslContext oldCtx = SSLFactory.getSslContext(options, true, true, openSslFlag);
             File keystoreFile = new File(options.keystore);
 
-            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getRawConfig());
+            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getServerEncryptionOptions(),
+                                                     DatabaseDescriptor.getClientEncryptionOptions());
             Thread.sleep(5000);
             keystoreFile.setLastModified(System.currentTimeMillis());
 
-            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getRawConfig());
+            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getServerEncryptionOptions(),
+                                                     DatabaseDescriptor.getClientEncryptionOptions());
             SslContext newCtx = SSLFactory.getSslContext(options, true, true, openSslFlag);
 
             Assert.assertNotEquals(oldCtx, newCtx);

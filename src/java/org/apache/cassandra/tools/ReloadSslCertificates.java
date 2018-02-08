@@ -20,7 +20,7 @@ package org.apache.cassandra.tools;
 import io.airlift.airline.Command;
 
 @Command(name = "reloadssl", description = "Signals Cassandra to reload SSL certificates")
-public class ReloadSslCerts extends NodeTool.NodeToolCmd
+public class ReloadSslCertificates extends NodeTool.NodeToolCmd
 {
     @Override
     public void execute(NodeProbe probe)

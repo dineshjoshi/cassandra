@@ -25,10 +25,12 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.KeyManagerFactory;
@@ -53,7 +55,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import org.apache.cassandra.concurrent.ScheduledExecutors;
-import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.EncryptionOptions;
 
 /**
@@ -81,8 +82,10 @@ public final class SSLFactory
      */
     private static final AtomicReference<SslContext> serverSslContext = new AtomicReference<>();
 
-    private static List<HotReloadableFile> hotReloadableFilesForServerCtx;
-    private static List<HotReloadableFile> hotReloadableFilesForClientCtx;
+    /**
+     * List of files that trigger hot reloading of SSL certificates
+     */
+    private static volatile List<HotReloadableFile> hotReloadableFiles = ImmutableList.of();
 
     /**
      * Default initial delay for hot reloading
@@ -99,12 +102,19 @@ public final class SSLFactory
      * Helper class for hot reloading SSL Contexts
      */
     private static class HotReloadableFile {
+        enum Type {
+            SERVER,
+            CLIENT
+        }
+
         private final File file;
         private volatile long lastModTime;
+        private final Type certType;
 
-        public HotReloadableFile(String path) {
+        public HotReloadableFile(String path, Type type) {
             file = new File(path);
             lastModTime = file.lastModified();
+            certType = type;
         }
 
         public boolean shouldReload() {
@@ -112,6 +122,14 @@ public final class SSLFactory
             boolean result = curModTime != lastModTime;
             lastModTime = curModTime;
             return result;
+        }
+
+        public boolean isServer() {
+            return certType == Type.SERVER;
+        }
+
+        public boolean isClient() {
+            return certType == Type.CLIENT;
         }
     }
 
@@ -215,15 +233,13 @@ public final class SSLFactory
     static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, boolean forServer, boolean useOpenSsl) throws IOException
     {
 
-        SslContext serverSslCtxValue = serverSslContext.get();
+        SslContext sslContext;
 
-        if (forServer && serverSslCtxValue != null)
-            return serverSslCtxValue;
+        if (forServer && (sslContext = serverSslContext.get()) != null)
+            return sslContext;
 
-        SslContext clientSslCtxValue = clientSslContext.get();
-
-        if (!forServer && clientSslCtxValue != null)
-            return clientSslCtxValue;
+        if (!forServer && (sslContext = serverSslContext.get()) != null)
+            return sslContext;
 
         /*
             There is a case where the netty/openssl combo might not support using KeyManagerFactory. specifically,
@@ -267,23 +283,27 @@ public final class SSLFactory
     }
 
     /**
-     * Performs a lightweight check whether the cert files have been refreshed.
+     * Performs a lightweight check whether the certificate files have been refreshed.
+     *
+     * @param serverEncryptionOptions
+     * @param clientEncryptionOptions
      */
-    public static void checkCertFilesForHotReloading(Config config) {
+    public static void checkCertFilesForHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
+                                                     EncryptionOptions clientEncryptionOptions) {
         logger.info("Checking whether certificates have been updated");
 
         if (!isHotReloadingInitialized)
-            initHotReloadableFiles(config);
+            initHotReloadableFiles(serverEncryptionOptions, clientEncryptionOptions);
 
-        if (hotReloadableFilesForServerCtx.stream().anyMatch(f -> f.shouldReload()))
+        if (hotReloadableFiles.stream().anyMatch(f -> f.isServer() && f.shouldReload()))
         {
-            logger.info("Server certificates have been updated. Reset context.");
+            logger.trace("Server certificates have been updated. Reset context.");
             serverSslContext.set(null);
         }
 
-        if (hotReloadableFilesForClientCtx.stream().anyMatch(f -> f.shouldReload()))
+        if (hotReloadableFiles.stream().anyMatch(f -> f.isClient() && f.shouldReload()))
         {
-            logger.info("Client certificates have been updated. Reset context.");
+            logger.trace("Client certificates have been updated. Reset context.");
             clientSslContext.set(null);
         }
     }
@@ -291,33 +311,49 @@ public final class SSLFactory
     /**
      * Determines whether to hot reload certificates and schedules a periodic task for it.
      *
-     * @param conf
+     * @param serverEncryptionOptions
+     * @param clientEncryptionOptions
      */
-    public static void initHotReloading(Config conf)
+    public static void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
+                                        EncryptionOptions clientEncryptionOptions)
     {
-        if ((conf.server_encryption_options.enabled || conf.client_encryption_options.enabled) && !isHotReloadingInitialized)
+        if ((serverEncryptionOptions.enabled || clientEncryptionOptions.enabled) && !isHotReloadingInitialized)
         {
             logger.debug("Enabling hot reloading SSLContext");
 
-            initHotReloadableFiles(conf);
+            initHotReloadableFiles(serverEncryptionOptions, clientEncryptionOptions);
 
             ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(() -> {
-                SSLFactory.checkCertFilesForHotReloading(conf);
+                SSLFactory.checkCertFilesForHotReloading(serverEncryptionOptions, clientEncryptionOptions);
             }, DEFAULT_HOT_RELOAD_INITIAL_DELAY_SEC, DEFAULT_HOT_RELOAD_PERIOD_SEC, TimeUnit.SECONDS);
-        } else
-        {
-            logger.debug("Disabling hot reloading SSLContext");
         }
     }
 
-    private static void initHotReloadableFiles(Config conf)
+    /**
+     * Initialize hot reloadable file list based on the encryption options.
+     *
+     * @param serverEncryptionOptions
+     * @param clientEncryptionOptions
+     */
+    private static void initHotReloadableFiles(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
+                                               EncryptionOptions clientEncryptionOptions)
     {
+        List<HotReloadableFile> fileList = new CopyOnWriteArrayList<>();
+
+        if (serverEncryptionOptions.enabled)
+        {
+            fileList.addAll(Arrays.asList(new HotReloadableFile(serverEncryptionOptions.keystore, HotReloadableFile.Type.SERVER),
+                                          new HotReloadableFile(serverEncryptionOptions.truststore, HotReloadableFile.Type.SERVER)));
+        }
+
+
+        if (clientEncryptionOptions.enabled)
+        {
+            fileList.addAll(Arrays.asList(new HotReloadableFile(clientEncryptionOptions.keystore, HotReloadableFile.Type.CLIENT),
+                                          new HotReloadableFile(clientEncryptionOptions.truststore, HotReloadableFile.Type.CLIENT)));
+        }
+
+        hotReloadableFiles = ImmutableList.copyOf(fileList);
         isHotReloadingInitialized = true;
-        hotReloadableFilesForServerCtx = ImmutableList.of(new HotReloadableFile(conf.server_encryption_options.keystore),
-                                                          new HotReloadableFile(conf.server_encryption_options.truststore));
-
-
-        hotReloadableFilesForClientCtx = ImmutableList.of(new HotReloadableFile(conf.client_encryption_options.keystore),
-                                                          new HotReloadableFile(conf.client_encryption_options.truststore));
     }
 }

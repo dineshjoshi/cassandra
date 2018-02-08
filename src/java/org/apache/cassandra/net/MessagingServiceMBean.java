@@ -130,5 +130,5 @@ public interface MessagingServiceMBean
 
     public int getVersion(String address) throws UnknownHostException;
 
-    void reloadSslCerts();
+    void reloadSslCertificates();
 }
