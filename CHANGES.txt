@@ -1,4 +1,5 @@
 4.0
+ * Make it possible to change neverPurgeTombstones during runtime (CASSANDRA-14214)
  * Remove GossipDigestSynVerbHandler#doSort() (CASSANDRA-14174)
  * Add nodetool clientlist (CASSANDRA-13665)
  * Revert ProtocolVersion changes from CASSANDRA-7544 (CASSANDRA-14211)
@@ -185,6 +186,7 @@
  * Switch to client init for sstabledump (CASSANDRA-13683)
  * CQLSH: Don't pause when capturing data (CASSANDRA-13743)
  * nodetool clearsnapshot requires --all to clear all snapshots (CASSANDRA-13391)
+ * Correctly count range tombstones in traces and tombstone thresholds (CASSANDRA-8527)
 
 
 3.11.2
