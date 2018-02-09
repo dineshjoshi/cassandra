@@ -872,7 +872,7 @@ public class DatabaseDescriptor
 
     public static void applySslContextHotReload()
     {
-        SSLFactory.initHotReloading(conf.server_encryption_options, conf.client_encryption_options);
+        SSLFactory.initHotReloading(conf.server_encryption_options, conf.client_encryption_options, false);
     }
 
     public static void applySeedProvider()

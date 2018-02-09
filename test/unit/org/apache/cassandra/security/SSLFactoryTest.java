@@ -162,27 +162,24 @@ public class SSLFactoryTest
     @Test
     public void testSslContextReload_HappyPath() throws IOException, InterruptedException
     {
-        boolean openSslFlag = OpenSsl.isAvailable();
-
         try
         {
             EncryptionOptions options = addKeystoreOptions(encryptionOptions);
-            DatabaseDescriptor.getRawConfig().server_encryption_options.enabled = true;
-            DatabaseDescriptor.getRawConfig().server_encryption_options.keystore = options.keystore;
+            options.enabled = true;
 
-            SslContext oldCtx = SSLFactory.getSslContext(options, true, true, openSslFlag);
+            SSLFactory.initHotReloading((ServerEncryptionOptions) options, options, true);
+
+            SslContext oldCtx = SSLFactory.getSslContext(options, true, true, OpenSsl.isAvailable());
             File keystoreFile = new File(options.keystore);
 
-            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getServerEncryptionOptions(),
-                                                     DatabaseDescriptor.getClientEncryptionOptions());
+            SSLFactory.checkCertFilesForHotReloading();
             Thread.sleep(5000);
             keystoreFile.setLastModified(System.currentTimeMillis());
 
-            SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getServerEncryptionOptions(),
-                                                     DatabaseDescriptor.getClientEncryptionOptions());
-            SslContext newCtx = SSLFactory.getSslContext(options, true, true, openSslFlag);
+            SSLFactory.checkCertFilesForHotReloading();
+            SslContext newCtx = SSLFactory.getSslContext(options, true, true, OpenSsl.isAvailable());
 
-            Assert.assertNotEquals(oldCtx, newCtx);
+            Assert.assertNotSame(oldCtx, newCtx);
         } catch (Exception e) {
             throw e;
         } finally {

@@ -96,7 +96,11 @@ public final class SSLFactory
      * Default periodic check delay for hot reloading
      */
     public static final int DEFAULT_HOT_RELOAD_PERIOD_SEC = 600;
-    private static volatile boolean isHotReloadingInitialized = false;
+
+    /**
+     * State variable to maintain initialization invariant
+     */
+    private static boolean isHotReloadingInitialized = false;
 
     /**
      * Helper class for hot reloading SSL Contexts
@@ -290,15 +294,13 @@ public final class SSLFactory
     /**
      * Performs a lightweight check whether the certificate files have been refreshed.
      *
-     * @param serverEncryptionOptions
-     * @param clientEncryptionOptions
+     * @throws IllegalStateException if {@link #initHotReloading(EncryptionOptions.ServerEncryptionOptions, EncryptionOptions)} is not called first
      */
-    public static void checkCertFilesForHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
-                                                     EncryptionOptions clientEncryptionOptions) {
-        logger.info("Checking whether certificates have been updated");
-
+    public static void checkCertFilesForHotReloading() {
         if (!isHotReloadingInitialized)
-            initHotReloadableFiles(serverEncryptionOptions, clientEncryptionOptions);
+            throw new IllegalStateException("Hot reloading functionality has not been initialized.");
+
+        logger.info("Checking whether certificates have been updated");
 
         if (hotReloadableFiles.stream().anyMatch(f -> f.isServer() && f.shouldReload()))
         {
@@ -319,46 +321,42 @@ public final class SSLFactory
      * @param serverEncryptionOptions
      * @param clientEncryptionOptions
      */
-    public static void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
-                                        EncryptionOptions clientEncryptionOptions)
+    public static synchronized void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
+                                                     EncryptionOptions clientEncryptionOptions,
+                                                     boolean force)
     {
-        if ((serverEncryptionOptions.enabled || clientEncryptionOptions.enabled) && !isHotReloadingInitialized)
-        {
-            logger.debug("Enabling hot reloading SSLContext");
+        if (isHotReloadingInitialized && !force)
+            return;
 
-            initHotReloadableFiles(serverEncryptionOptions, clientEncryptionOptions);
+        logger.debug("Initializing hot reloading SSLContext");
 
-            ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(() -> {
-                SSLFactory.checkCertFilesForHotReloading(serverEncryptionOptions, clientEncryptionOptions);
-            }, DEFAULT_HOT_RELOAD_INITIAL_DELAY_SEC, DEFAULT_HOT_RELOAD_PERIOD_SEC, TimeUnit.SECONDS);
-        }
-    }
-
-    /**
-     * Initialize hot reloadable file list based on the encryption options.
-     *
-     * @param serverEncryptionOptions
-     * @param clientEncryptionOptions
-     */
-    private static void initHotReloadableFiles(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
-                                               EncryptionOptions clientEncryptionOptions)
-    {
-        List<HotReloadableFile> fileList = new CopyOnWriteArrayList<>();
+        List<HotReloadableFile> fileList = new ArrayList<>();
 
         if (serverEncryptionOptions.enabled)
         {
-            fileList.addAll(Arrays.asList(new HotReloadableFile(serverEncryptionOptions.keystore, HotReloadableFile.Type.SERVER),
-                                          new HotReloadableFile(serverEncryptionOptions.truststore, HotReloadableFile.Type.SERVER)));
+            fileList.add(new HotReloadableFile(serverEncryptionOptions.keystore,
+                                               HotReloadableFile.Type.SERVER));
+            fileList.add(new HotReloadableFile(serverEncryptionOptions.truststore,
+                                               HotReloadableFile.Type.SERVER));
         }
-
 
         if (clientEncryptionOptions.enabled)
         {
-            fileList.addAll(Arrays.asList(new HotReloadableFile(clientEncryptionOptions.keystore, HotReloadableFile.Type.CLIENT),
-                                          new HotReloadableFile(clientEncryptionOptions.truststore, HotReloadableFile.Type.CLIENT)));
+            fileList.add(new HotReloadableFile(clientEncryptionOptions.keystore,
+                                               HotReloadableFile.Type.CLIENT));
+            fileList.add(new HotReloadableFile(clientEncryptionOptions.truststore,
+                                               HotReloadableFile.Type.CLIENT));
         }
 
         hotReloadableFiles = ImmutableList.copyOf(fileList);
+
+        if (!isHotReloadingInitialized)
+        {
+            ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(SSLFactory::checkCertFilesForHotReloading,
+                                                                     DEFAULT_HOT_RELOAD_INITIAL_DELAY_SEC,
+                                                                     DEFAULT_HOT_RELOAD_PERIOD_SEC, TimeUnit.SECONDS);
+        }
+
         isHotReloadingInitialized = true;
     }
 }
