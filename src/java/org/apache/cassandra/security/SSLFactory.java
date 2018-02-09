@@ -294,7 +294,8 @@ public final class SSLFactory
     /**
      * Performs a lightweight check whether the certificate files have been refreshed.
      *
-     * @throws IllegalStateException if {@link #initHotReloading(EncryptionOptions.ServerEncryptionOptions, EncryptionOptions)} is not called first
+     * @throws IllegalStateException if {@link #initHotReloading(EncryptionOptions.ServerEncryptionOptions, EncryptionOptions, boolean)}
+     * is not called first
      */
     public static void checkCertFilesForHotReloading() {
         if (!isHotReloadingInitialized)
