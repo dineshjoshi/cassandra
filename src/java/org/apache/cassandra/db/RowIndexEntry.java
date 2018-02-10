@@ -25,17 +25,20 @@ import java.util.List;
 
 import com.google.common.primitives.Ints;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.cache.IMeasurableMemory;
 import org.apache.cassandra.io.sstable.IndexHelper;
 import org.apache.cassandra.io.sstable.format.Version;
 import org.apache.cassandra.io.util.DataInputPlus;
 import org.apache.cassandra.io.util.DataOutputPlus;
-import org.apache.cassandra.io.util.FileUtils;
 import org.apache.cassandra.utils.ObjectSizes;
 
 public class RowIndexEntry<T> implements IMeasurableMemory
 {
+    private static Logger logger = LoggerFactory.getLogger(RowIndexEntry.class);
     private static final long EMPTY_SIZE = ObjectSizes.measure(new RowIndexEntry(0));
 
     public final long position;
@@ -326,7 +329,15 @@ public class RowIndexEntry<T> implements IMeasurableMemory
 
             size += columnsIndex.size() * TypeSizes.sizeof(0);
 
-            return Ints.checkedCast(size);
+            try
+            {
+                return Ints.checkedCast(size);
+            }
+            catch (IllegalArgumentException e)
+            {
+                logger.error("Integer overflow detected. Please adjust column_index_size_in_kb. See CASSANDRA-13973.", e);
+                throw e;
+            }
         }
 
         @Override
