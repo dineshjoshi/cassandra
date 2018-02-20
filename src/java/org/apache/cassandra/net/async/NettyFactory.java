@@ -287,7 +287,7 @@ public final class NettyFactory
                 }
                 else
                 {
-                    SslContext sslContext = SSLFactory.getSslContext(encryptionOptions, true, true);
+                    SslContext sslContext = SSLFactory.getSslContext(encryptionOptions, true, SSLFactory.ConnectionType.CLIENT);
                     InetSocketAddress peer = encryptionOptions.require_endpoint_verification ? channel.remoteAddress() : null;
                     SslHandler sslHandler = newSslHandler(channel, sslContext, peer);
                     logger.trace("creating inbound netty SslContext: context={}, engine={}", sslContext.getClass().getName(), sslHandler.engine().getClass().getName());
@@ -362,7 +362,7 @@ public final class NettyFactory
             // order of handlers: ssl -> logger -> handshakeHandler
             if (params.encryptionOptions != null)
             {
-                SslContext sslContext = SSLFactory.getSslContext(params.encryptionOptions, true, false);
+                SslContext sslContext = SSLFactory.getSslContext(params.encryptionOptions, true, SSLFactory.ConnectionType.PEER);
                 // for some reason channel.remoteAddress() will return null
                 InetAddressAndPort address = params.connectionId.remote();
                 InetSocketAddress peer = params.encryptionOptions.require_endpoint_verification ? new InetSocketAddress(address.address, address.port) : null;

@@ -69,6 +69,11 @@ public final class SSLFactory
 {
     private static final Logger logger = LoggerFactory.getLogger(SSLFactory.class);
 
+    /**
+     * Indicator if a connection is shared with a client application or another cassandra nodes (peer).
+     */
+    public enum ConnectionType { CLIENT, PEER }
+
     @VisibleForTesting
     static volatile boolean checkedExpiry = false;
 
@@ -233,24 +238,24 @@ public final class SSLFactory
     /**
      * get a netty {@link SslContext} instance
      */
-    public static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, boolean forServer) throws IOException
+    public static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, ConnectionType connectionType) throws IOException
     {
-        return getSslContext(options, buildTruststore, forServer, OpenSsl.isAvailable());
+        return getSslContext(options, buildTruststore, connectionType, OpenSsl.isAvailable());
     }
 
     /**
      * Get a netty {@link SslContext} instance.
      */
     @VisibleForTesting
-    static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, boolean forServer, boolean useOpenSsl) throws IOException
+    static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, ConnectionType connectionType, boolean useOpenSsl) throws IOException
     {
 
         SslContext sslContext;
 
-        if (forServer && (sslContext = serverSslContext.get()) != null)
+        if (connectionType == ConnectionType.PEER && (sslContext = serverSslContext.get()) != null)
             return sslContext;
 
-        if (!forServer && (sslContext = clientSslContext.get()) != null)
+        if (connectionType == ConnectionType.CLIENT && (sslContext = clientSslContext.get()) != null)
             return sslContext;
 
         /*
@@ -262,11 +267,11 @@ public final class SSLFactory
             the config/yaml API simple.
          */
         KeyManagerFactory kmf = null;
-        if (forServer || options.require_client_auth)
+        if (connectionType == ConnectionType.PEER || options.require_client_auth)
             kmf = buildKeyManagerFactory(options);
 
         SslContextBuilder builder;
-        if (forServer)
+        if (connectionType == ConnectionType.PEER)
         {
             builder = SslContextBuilder.forServer(kmf);
             builder.clientAuth(options.require_client_auth ? ClientAuth.REQUIRE : ClientAuth.NONE);
@@ -287,7 +292,7 @@ public final class SSLFactory
             builder.trustManager(buildTrustManagerFactory(options));
 
         SslContext ctx = builder.build();
-        AtomicReference<SslContext> ref = forServer ? serverSslContext : clientSslContext;
+        AtomicReference<SslContext> ref = connectionType == ConnectionType.PEER ? serverSslContext : clientSslContext;
         if (ref.compareAndSet(null, ctx))
             return ctx;
 
