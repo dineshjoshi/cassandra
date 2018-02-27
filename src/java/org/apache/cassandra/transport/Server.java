@@ -24,8 +24,6 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,6 +194,8 @@ public class Server implements CassandraDaemon.Server
                         .put("version", String.valueOf(conn.getVersion().asInt()))
                         .put("requests", String.valueOf(conn.requests.getCount()))
                         .put("ssl", conn.channel().pipeline().get(SslHandler.class) == null ? "false" : "true")
+                        .put("driverName", conn.getClientState().getDriverName().orElse("undefined"))
+                        .put("driverVersion", conn.getClientState().getDriverVersion().orElse("undefined"))
                         .build());
             }
         }

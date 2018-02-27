@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -106,6 +107,10 @@ public class ClientState
     // The remote address of the client - null for internal clients.
     private final InetSocketAddress remoteAddress;
 
+    // Driver String for the client
+    private volatile Optional<String> driverName = Optional.empty();
+    private volatile Optional<String> driverVersion = Optional.empty();
+
     // The biggest timestamp that was returned by getTimestamp/assigned to a query. This is global to ensure that the
     // timestamp assigned are strictly monotonic on a node, which is likely what user expect intuitively (more likely,
     // most new user will intuitively expect timestamp to be strictly monotonic cluster-wise, but while that last part
@@ -135,6 +140,8 @@ public class ClientState
         this.remoteAddress = source.remoteAddress;
         this.user = source.user;
         this.keyspace = source.keyspace;
+        this.driverName = source.driverName;
+        this.driverVersion = source.driverVersion;
     }
 
     /**
@@ -241,6 +248,27 @@ public class ClientState
             if (tstamp == minTimestampToUse || lastTimestampMicros.compareAndSet(last, tstamp))
                 return tstamp;
         }
+    }
+
+    public Optional<String> getDriverName()
+    {
+        return driverName;
+    }
+
+    public Optional<String> getDriverVersion()
+    {
+        return driverVersion;
+    }
+
+    public void setDriverName(String driverName)
+    {
+        this.driverName = Optional.ofNullable(driverName);
+    }
+
+    public void setDriverVersion(String driverVersion)
+    {
+        if (driverName.isPresent())
+            this.driverVersion = Optional.ofNullable(driverVersion);
     }
 
     public static QueryHandler getCQLQueryHandler()
