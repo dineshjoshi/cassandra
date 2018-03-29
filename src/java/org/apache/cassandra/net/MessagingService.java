@@ -1287,4 +1287,11 @@ public final class MessagingService implements MessagingServiceMBean
     {
         return socketThreads;
     }
+
+
+    @Override
+    public void reloadSslCertificates()
+    {
+        SSLFactory.checkCertFilesForHotReloading();
+    }
 }

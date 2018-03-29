@@ -24,7 +24,6 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
 import org.slf4j.Logger;
@@ -345,31 +344,28 @@ public class Server implements CassandraDaemon.Server
 
     protected abstract static class AbstractSecureIntializer extends Initializer
     {
-        private final SSLContext sslContext;
         private final EncryptionOptions encryptionOptions;
 
         protected AbstractSecureIntializer(Server server, EncryptionOptions encryptionOptions)
         {
             super(server);
             this.encryptionOptions = encryptionOptions;
+        }
+
+        protected final SslHandler createSslHandler() {
             try
             {
-                this.sslContext = SSLFactory.createSSLContext(encryptionOptions, encryptionOptions.require_client_auth);
+                SSLEngine sslEngine = SSLFactory.getSslContext(encryptionOptions, encryptionOptions.require_client_auth).createSSLEngine();
+                sslEngine.setUseClientMode(false);
+                String[] suites = SSLFactory.filterCipherSuites(sslEngine.getSupportedCipherSuites(), encryptionOptions.cipher_suites);
+                sslEngine.setEnabledCipherSuites(suites);
+                sslEngine.setNeedClientAuth(encryptionOptions.require_client_auth);
+                return new SslHandler(sslEngine);
             }
             catch (IOException e)
             {
                 throw new RuntimeException("Failed to setup secure pipeline", e);
             }
-        }
-
-        protected final SslHandler createSslHandler() {
-            SSLEngine sslEngine = sslContext.createSSLEngine();
-            sslEngine.setUseClientMode(false);
-            String[] suites = SSLFactory.filterCipherSuites(sslEngine.getSupportedCipherSuites(), encryptionOptions.cipher_suites);
-            sslEngine.setEnabledCipherSuites(suites);
-            sslEngine.setNeedClientAuth(encryptionOptions.require_client_auth);
-            sslEngine.setEnabledProtocols(SSLFactory.ACCEPTED_PROTOCOLS);
-            return new SslHandler(sslEngine);
         }
     }
 

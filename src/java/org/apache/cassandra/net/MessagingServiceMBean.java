@@ -89,4 +89,6 @@ public interface MessagingServiceMBean
     public Map<String, Long> getTimeoutsPerHost();
 
     public int getVersion(String address) throws UnknownHostException;
+
+    void reloadSslCertificates();
 }

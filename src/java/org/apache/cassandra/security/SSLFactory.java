@@ -18,16 +18,20 @@
 package org.apache.cassandra.security;
 
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -36,12 +40,14 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.EncryptionOptions;
 import org.apache.cassandra.io.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -55,6 +61,54 @@ public final class SSLFactory
     private static final Logger logger = LoggerFactory.getLogger(SSLFactory.class);
     public static final String[] ACCEPTED_PROTOCOLS = new String[] {"SSLv2Hello", "TLSv1", "TLSv1.1", "TLSv1.2"};
     private static boolean checkedExpiry = false;
+
+    /**
+     * A cached reference of the {@link SSLContext} for client-facing, native protocol connections
+     */
+    private static final AtomicReference<SSLContext> nativeProtocolSslContext = new AtomicReference<>();
+
+    /**
+     * List of files that trigger hot reloading of SSL certificates
+     */
+    private static volatile List<HotReloadableFile> hotReloadableFiles = ImmutableList.of();
+
+    /**
+     * Default initial delay for hot reloading
+     */
+    public static final int DEFAULT_HOT_RELOAD_INITIAL_DELAY_SEC = 600;
+
+    /**
+     * Default periodic check delay for hot reloading
+     */
+    public static final int DEFAULT_HOT_RELOAD_PERIOD_SEC = 600;
+
+    /**
+     * State variable to maintain initialization invariant
+     */
+    private static boolean isHotReloadingInitialized = false;
+
+    /**
+     * Helper class for hot reloading SSL Contexts
+     */
+    private static class HotReloadableFile
+    {
+        private final File file;
+        private volatile long lastModTime;
+
+        HotReloadableFile(String path)
+        {
+            file = new File(path);
+            lastModTime = file.lastModified();
+        }
+
+        boolean shouldReload()
+        {
+            long curModTime = file.lastModified();
+            boolean result = curModTime != lastModTime;
+            lastModTime = curModTime;
+            return result;
+        }
+    }
 
     public static SSLServerSocket getServerSocket(EncryptionOptions options, InetAddress address, int port) throws IOException
     {
@@ -204,4 +258,78 @@ public final class SSLFactory
         }
         return ret;
     }
+
+    public static SSLContext getSslContext(EncryptionOptions options, boolean buildTruststore) throws IOException {
+        SSLContext sslContext;
+
+        if ((sslContext = nativeProtocolSslContext.get()) != null)
+            return sslContext;
+
+        SSLContext ctx = createSSLContext(options, buildTruststore);
+
+        if (nativeProtocolSslContext.compareAndSet(null, ctx)) {
+            return ctx;
+        }
+
+        return nativeProtocolSslContext.get();
+    }
+
+
+    /**
+     * Performs a lightweight check whether the certificate files have been refreshed.
+     *
+     * @throws IllegalStateException if {@link #initHotReloading(EncryptionOptions.ServerEncryptionOptions, EncryptionOptions.ClientEncryptionOptions, boolean)}
+     * is not called first
+     */
+    public static void checkCertFilesForHotReloading()
+    {
+        if (!isHotReloadingInitialized)
+            throw new IllegalStateException("Hot reloading functionality has not been initialized.");
+
+        logger.trace("Checking whether certificates have been updated");
+
+        if (hotReloadableFiles.stream().anyMatch(f -> f.shouldReload()))
+        {
+            logger.info("SSL certificates have been updated. Reseting the context for new connections.");
+            nativeProtocolSslContext.set(null);
+        }
+    }
+
+    /**
+     * Determines whether to hot reload certificates and schedules a periodic task for it.
+     *
+     * @param serverEncryptionOptions
+     * @param clientEncryptionOptions
+     */
+    public static synchronized void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
+                                                     EncryptionOptions.ClientEncryptionOptions clientEncryptionOptions,
+                                                     boolean force)
+    {
+        if (isHotReloadingInitialized && !force)
+            return;
+
+        logger.debug("Initializing hot reloading SSLContext");
+
+        List<HotReloadableFile> fileList = new ArrayList<>();
+
+        if (serverEncryptionOptions != null || clientEncryptionOptions.enabled)
+        {
+            fileList.add(new HotReloadableFile(serverEncryptionOptions.keystore));
+            fileList.add(new HotReloadableFile(serverEncryptionOptions.truststore));
+            fileList.add(new HotReloadableFile(clientEncryptionOptions.keystore));
+            fileList.add(new HotReloadableFile(clientEncryptionOptions.truststore));
+        }
+
+        hotReloadableFiles = ImmutableList.copyOf(fileList);
+
+        if (!isHotReloadingInitialized)
+        {
+            ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(SSLFactory::checkCertFilesForHotReloading,
+                                                                     DEFAULT_HOT_RELOAD_INITIAL_DELAY_SEC,
+                                                                     DEFAULT_HOT_RELOAD_PERIOD_SEC, TimeUnit.SECONDS);
+        }
+
+        isHotReloadingInitialized = true;
+    }
+
 }
