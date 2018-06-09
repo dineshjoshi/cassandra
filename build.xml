@@ -63,7 +63,7 @@
     <property name="test.microbench.src" value="${test.dir}/microbench"/>
     <property name="dist.dir" value="${build.dir}/dist"/>
     <property name="tmp.dir" value="${java.io.tmpdir}"/>
-
+    <property name="test.runners" value="1"/>
     <property name="doc.dir" value="${basedir}/doc"/>
 
     <property name="source.version" value="1.8"/>
