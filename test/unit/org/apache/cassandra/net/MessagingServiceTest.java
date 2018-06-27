@@ -617,12 +617,14 @@ public class MessagingServiceTest
                 {
                     s = new Socket(ep.address, ep.port);
                     System.out.println("Successfully connected...something is listening! :(");
-                } catch(Exception e)
+                }
+                catch(Exception e)
                 {
                     break;
-                } finally
+                }
+                finally
                 {
-                    s.close();
+                    if (s != null) s.close();
                 }
 
                 tries++;
