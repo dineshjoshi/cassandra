@@ -28,8 +28,6 @@ public class StandaloneSSTableUtilTest extends ToolsTester
 {
 
     @Test
-    public void dummyTest() {}
-//    @Test
     public void testStandaloneSSTableUtil_NoArgs()
     {
         runTool(1, "org.apache.cassandra.tools.StandaloneSSTableUtil");
@@ -41,7 +39,7 @@ public class StandaloneSSTableUtilTest extends ToolsTester
         assertServerNotLoaded();
     }
 
-//    @Test
+    @Test
     public void testStandaloneSSTableUtil_WithArgs()
     {
         runTool(0, "org.apache.cassandra.tools.StandaloneSSTableUtil", "--debug", "-c", "system_schema", "tables");

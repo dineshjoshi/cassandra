@@ -45,9 +45,6 @@ public class HintMessageTest
     private static final String TABLE = "table";
 
     @Test
-    public void dummyTest() {}
-
-//    @Test
     public void testSerializer() throws IOException
     {
         SchemaLoader.prepareServer();
