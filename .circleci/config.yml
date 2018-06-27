@@ -163,7 +163,7 @@ jobs:
             echo "***java tests***"
 
             # get all of our unit test filenames
-            set -eo pipefail && circleci tests glob "$HOME/cassandra/test/unit/**/*Test*.java" | sort > /tmp/all_java_unit_tests.txt
+            set -eo pipefail && circleci tests glob "$HOME/cassandra/test/unit/**/*.java" > /tmp/all_java_unit_tests.txt
 
             # split up the unit tests into groups based on the number of containers we have
             set -eo pipefail && circleci tests split --split-by=timings --timings-type=filename --index=${CIRCLE_NODE_INDEX} --total=${CIRCLE_NODE_TOTAL} /tmp/all_java_unit_tests.txt > /tmp/java_tests_${CIRCLE_NODE_INDEX}.txt
@@ -181,6 +181,7 @@ jobs:
 
             time mv ~/cassandra /tmp
             cd /tmp/cassandra
+            sudo netstat -ntlp | grep LISTEN
             ant testclasslist -Dtest.classlistfile=/tmp/java_tests_${CIRCLE_NODE_INDEX}_final.txt
          no_output_timeout: 15m
       - store_test_results:
