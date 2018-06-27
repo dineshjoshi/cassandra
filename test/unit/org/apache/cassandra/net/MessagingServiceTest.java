@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -606,6 +607,28 @@ public class MessagingServiceTest
 
         try
         {
+            int tries = 0;
+            while (tries < 10)
+            {
+                InetAddressAndPort ep = FBUtilities.getBroadcastAddressAndPort();
+
+                Socket s = null;
+                try
+                {
+                    s = new Socket(ep.address, ep.port);
+                    System.out.println("Successfully connected...something is listening! :(");
+                } catch(Exception e)
+                {
+                    break;
+                } finally
+                {
+                    s.close();
+                }
+
+                tries++;
+                System.out.println("Waiting for 1 second before retrying...");
+                Thread.sleep(1000);
+            }
             messagingService.listen(serverEncryptionOptions);
             Assert.assertTrue(messagingService.isListening());
             int expectedListeningCount = NettyFactory.determineAcceptGroupSize(serverEncryptionOptions);
