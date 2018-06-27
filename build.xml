@@ -54,6 +54,7 @@
     <property name="test.conf" value="${test.dir}/conf"/>
     <property name="test.data" value="${test.dir}/data"/>
     <property name="test.name" value="*Test"/>
+    <property name="test.runners" value="1"/>
     <property name="test.classlistfile" value="testlist.txt"/>
     <property name="benchmark.name" value=""/>
     <property name="test.methods" value=""/>
