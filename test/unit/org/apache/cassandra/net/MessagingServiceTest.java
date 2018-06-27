@@ -613,10 +613,11 @@ public class MessagingServiceTest
                 try
                 {
                     messagingService.listen(serverEncryptionOptions);
+                    break;
                 }
                 catch(Exception e)
                 {
-                    break;
+                    System.out.println("Listen failed...Retrying...");
                 }
 
                 tries++;
