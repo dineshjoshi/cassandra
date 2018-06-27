@@ -661,7 +661,7 @@ public class MessagingServiceTest
             try
             {
                 System.out.println("Exception caught, running netstat");
-                Process pr = Runtime.getRuntime().exec("sudo netstat -ntlp | grep LISTEN");
+                Process pr = Runtime.getRuntime().exec("sudo netstat -ntlp | grep 7011");
 
                 BufferedReader input = new BufferedReader(new InputStreamReader(
                 pr.getInputStream()));
