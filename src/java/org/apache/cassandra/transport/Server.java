@@ -126,8 +126,10 @@ public class Server implements CassandraDaemon.Server
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap()
                                     .channel(useEpoll ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
+
                                     .childOption(ChannelOption.TCP_NODELAY, true)
                                     .childOption(ChannelOption.SO_LINGER, 0)
+                                    .childOption(ChannelOption.SO_REUSEADDR, true)
                                     .childOption(ChannelOption.SO_KEEPALIVE, DatabaseDescriptor.getRpcKeepAlive())
                                     .childOption(ChannelOption.ALLOCATOR, CBUtil.allocator)
                                     .childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 32 * 1024)
