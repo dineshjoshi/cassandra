@@ -610,28 +610,19 @@ public class MessagingServiceTest
             int tries = 0;
             while (tries < 10)
             {
-                InetAddressAndPort ep = FBUtilities.getBroadcastAddressAndPort();
-
-                Socket s = null;
                 try
                 {
-                    s = new Socket(ep.address, ep.port);
-                    System.out.println("Successfully connected...something is listening! :(");
+                    messagingService.listen(serverEncryptionOptions);
                 }
                 catch(Exception e)
                 {
                     break;
-                }
-                finally
-                {
-                    if (s != null) s.close();
                 }
 
                 tries++;
                 System.out.println("Waiting for 1 second before retrying...");
                 Thread.sleep(1000);
             }
-            messagingService.listen(serverEncryptionOptions);
             Assert.assertTrue(messagingService.isListening());
             int expectedListeningCount = NettyFactory.determineAcceptGroupSize(serverEncryptionOptions);
             Assert.assertEquals(expectedListeningCount, messagingService.serverChannels.size());
