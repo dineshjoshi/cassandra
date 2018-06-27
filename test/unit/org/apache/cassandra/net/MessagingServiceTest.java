@@ -20,7 +20,9 @@
  */
 package org.apache.cassandra.net;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
@@ -652,6 +654,38 @@ public class MessagingServiceTest
                 }
 
                 Assert.assertEquals(expectedCount, found);
+            }
+        }
+        catch (Exception e)
+        {
+            try
+            {
+                System.out.println("Exception caught, running netstat");
+                Process pr = Runtime.getRuntime().exec("sudo netstat -ntlp | grep LISTEN");
+
+                BufferedReader input = new BufferedReader(new InputStreamReader(
+                pr.getInputStream()));
+
+                String line = null;
+
+                while ((line = input.readLine()) != null)
+                {
+                    System.out.println(line);
+                }
+
+
+                int exitVal = pr.waitFor();
+                System.out.println("Exited with error code " + exitVal);
+
+                throw e;
+            }
+            catch (IOException e1)
+            {
+                e1.printStackTrace();
+            }
+            catch (InterruptedException e1)
+            {
+                e1.printStackTrace();
             }
         }
         finally
