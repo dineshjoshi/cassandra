@@ -20,11 +20,8 @@
  */
 package org.apache.cassandra.net;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,14 +31,18 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.*;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.Iterables;
 import com.google.common.net.InetAddresses;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import com.codahale.metrics.Timer;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import org.apache.cassandra.auth.IInternodeAuthenticator;
@@ -58,13 +59,12 @@ import org.apache.cassandra.net.async.OutboundConnectionParams;
 import org.apache.cassandra.net.async.OutboundMessagingPool;
 import org.apache.cassandra.utils.FBUtilities;
 import org.caffinitas.ohc.histo.EstimatedHistogram;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class MessagingServiceTest
 {
@@ -607,23 +607,8 @@ public class MessagingServiceTest
 
         try
         {
-            int tries = 0;
-            while (tries < 10)
-            {
-                try
-                {
-                    messagingService.listen(serverEncryptionOptions);
-                    break;
-                }
-                catch(Exception e)
-                {
-                    System.out.println("Listen failed...Retrying...");
-                }
+            messagingService.listen(serverEncryptionOptions);
 
-                tries++;
-                System.out.println("Waiting for 1 second before retrying...");
-                Thread.sleep(1000);
-            }
             Assert.assertTrue(messagingService.isListening());
             int expectedListeningCount = NettyFactory.determineAcceptGroupSize(serverEncryptionOptions);
             Assert.assertEquals(expectedListeningCount, messagingService.serverChannels.size());
@@ -673,41 +658,12 @@ public class MessagingServiceTest
                 Assert.assertEquals(expectedCount, found);
             }
         }
-        catch (Exception e)
-        {
-            try
-            {
-                System.out.println("Exception caught, running netstat");
-                Process pr = Runtime.getRuntime().exec("sudo netstat -ntlp | grep 7011");
-
-                BufferedReader input = new BufferedReader(new InputStreamReader(
-                pr.getInputStream()));
-
-                String line = null;
-
-                while ((line = input.readLine()) != null)
-                {
-                    System.out.println(line);
-                }
-
-
-                int exitVal = pr.waitFor();
-                System.out.println("Exited with error code " + exitVal);
-
-                throw e;
-            }
-            catch (IOException e1)
-            {
-                e1.printStackTrace();
-            }
-            catch (InterruptedException e1)
-            {
-                e1.printStackTrace();
-            }
-        }
         finally
         {
             messagingService.shutdown(true);
+            for (ServerChannel serverChannel : messagingService.serverChannels)
+                Assert.assertEquals(0, serverChannel.size());
+
             messagingService.clearServerChannels();
             Assert.assertEquals(0, messagingService.serverChannels.size());
         }
