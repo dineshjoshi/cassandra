@@ -40,6 +40,14 @@ import org.apache.cassandra.net.MessageIn;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.ParameterType;
 
+/**
+ * Parses out individual messages from the incoming buffers. Each message, both header and payload, is incrementally built up
+ * from the available input data, then passed to the {@link #messageConsumer}.
+ *
+ * Note: this class derives from {@link ByteToMessageDecoder} to take advantage of the {@link ByteToMessageDecoder.Cumulator}
+ * behavior across {@link #decode(ChannelHandlerContext, ByteBuf, List)} invocations. That way we don't have to maintain
+ * the not-fully consumed {@link ByteBuf}s.
+ */
 public abstract class BaseMessageInHandler extends ByteToMessageDecoder
 {
     public static final Logger logger = LoggerFactory.getLogger(BaseMessageInHandler.class);
@@ -52,7 +60,8 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
         READ_PARAMETERS_SIZE,
         READ_PARAMETERS_DATA,
         READ_PAYLOAD_SIZE,
-        READ_PAYLOAD
+        READ_PAYLOAD,
+        CLOSED
     }
 
     /**
@@ -77,6 +86,8 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
     final InetAddressAndPort peer;
     final int messagingVersion;
 
+    protected State state;
+
     public BaseMessageInHandler(InetAddressAndPort peer, int messagingVersion, BiConsumer<MessageIn, Integer> messageConsumer)
     {
         this.peer = peer;
@@ -84,7 +95,8 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
         this.messageConsumer = messageConsumer;
     }
 
-    public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out);
+    // redeclared here to make the method public (for testing)
+    public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
 
     MessageHeader readFirstChunk(ByteBuf in) throws IOException
     {
@@ -105,11 +117,13 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
         if (cause instanceof EOFException)
             logger.trace("eof reading from socket; closing", cause);
         else if (cause instanceof UnknownTableException)
-            logger.warn("Got message from unknown table while reading from socket; closing", cause);
+            logger.warn(" Got message from unknown table while reading from socket {}[{}]; closing",
+                        ctx.channel().remoteAddress(), ctx.channel().id(), cause);
         else if (cause instanceof IOException)
             logger.trace("IOException reading from socket; closing", cause);
         else
-            logger.warn("Unexpected exception caught in inbound channel pipeline from " + ctx.channel().remoteAddress(), cause);
+            logger.warn("Unexpected exception caught in inbound channel pipeline from {}[{}]",
+                        ctx.channel().remoteAddress(), ctx.channel().id(), cause);
 
         ctx.close();
     }
@@ -118,6 +132,7 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
     public void channelInactive(ChannelHandlerContext ctx)
     {
         logger.trace("received channel closed message for peer {} on local addr {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
+        state = State.CLOSED;
         ctx.fireChannelInactive();
     }
 
@@ -128,7 +143,7 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
     /**
      * A simple struct to hold the message header data as it is being built up.
      */
-    protected static class MessageHeader
+    static class MessageHeader
     {
         int messageId;
         long constructionTime;
@@ -144,5 +159,11 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
          * key/value entries in the header.
          */
         int parameterLength;
+    }
+
+    // for testing purposes only!!!
+    public State getState()
+    {
+        return state;
     }
 }

@@ -32,8 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import org.apache.cassandra.db.monitoring.ApproximateTime;
 import org.apache.cassandra.io.util.DataInputBuffer;
 import org.apache.cassandra.locator.InetAddressAndPort;
 import org.apache.cassandra.net.MessageIn;
@@ -42,18 +40,12 @@ import org.apache.cassandra.net.ParameterType;
 import org.apache.cassandra.utils.vint.VIntCoding;
 
 /**
- * Parses out individual messages from the incoming buffers. Each message, both header and payload, is incrementally built up
- * from the available input data, then passed to the {@link #messageConsumer}.
- *
- * Note: this class derives from {@link ByteToMessageDecoder} to take advantage of the {@link ByteToMessageDecoder.Cumulator}
- * behavior across {@link #decode(ChannelHandlerContext, ByteBuf, List)} invocations. That way we don't have to maintain
- * the not-fully consumed {@link ByteBuf}s.
+ * Parses incoming messages as per the 4.0 internode messaging protocol.
  */
 public class MessageInHandler extends BaseMessageInHandler
 {
     public static final Logger logger = LoggerFactory.getLogger(MessageInHandler.class);
 
-    private State state;
     private MessageHeader messageHeader;
 
     MessageInHandler(InetAddressAndPort peer, int messagingVersion)
@@ -76,8 +68,14 @@ public class MessageInHandler extends BaseMessageInHandler
      * maintains a trivial state machine to remember progress across invocations.
      */
     @SuppressWarnings("resource")
-    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception
     {
+        if (state == State.CLOSED)
+        {
+            in.readerIndex(in.writerIndex());
+            return;
+        }
+
         ByteBufDataInputPlus inputPlus = new ByteBufDataInputPlus(in);
         try
         {
@@ -129,8 +127,8 @@ public class MessageInHandler extends BaseMessageInHandler
 
                         // TODO consider deserializing the message not on the event loop
                         MessageIn<Object> messageIn = MessageIn.read(inputPlus, messagingVersion,
-                                                                     messageHeader.messageId, messageHeader.constructionTime, messageHeader.from,
-                                                                     messageHeader.payloadSize, messageHeader.verb, messageHeader.parameters);
+                                                                         messageHeader.messageId, messageHeader.constructionTime, messageHeader.from,
+                                                                         messageHeader.payloadSize, messageHeader.verb, messageHeader.parameters);
 
                         if (messageIn != null)
                             messageConsumer.accept(messageIn, messageHeader.messageId);
@@ -145,7 +143,16 @@ public class MessageInHandler extends BaseMessageInHandler
         }
         catch (Exception e)
         {
-            exceptionCaught(ctx, e);
+            // prevent any future attempts at reading messages from any inbound buffers, as we're already in a bad state
+            state = State.CLOSED;
+
+            // force the buffer to appear to be consumed, thereby exiting the ByteToMessageDecoder.callDecode() loop,
+            // and other paths in that class, more efficiently
+            in.readerIndex(in.writerIndex());
+
+            // throwing the exception up causes the ByteToMessageDecoder.callDecode() loop to exit. if we don't do that,
+            // we'll keep trying to process data out of the last received buffer (and it'll be really, really wrong)
+            throw e;
         }
     }
 

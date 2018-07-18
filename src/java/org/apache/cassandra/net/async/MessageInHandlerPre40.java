@@ -39,6 +39,9 @@ import org.apache.cassandra.net.MessageIn;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.ParameterType;
 
+/**
+ * Parses incoming messages as per the pre-4.0 internode messaging protocol.
+ */
 public class MessageInHandlerPre40 extends BaseMessageInHandler
 {
     public static final Logger logger = LoggerFactory.getLogger(MessageInHandlerPre40.class);
@@ -47,7 +50,6 @@ public class MessageInHandlerPre40 extends BaseMessageInHandler
     static final int PARAMETERS_VALUE_SIZE_LENGTH = Integer.BYTES;
     static final int PAYLOAD_SIZE_LENGTH = Integer.BYTES;
 
-    private State state;
     private MessageHeader messageHeader;
 
     MessageInHandlerPre40(InetAddressAndPort peer, int messagingVersion)
@@ -70,8 +72,14 @@ public class MessageInHandlerPre40 extends BaseMessageInHandler
      * maintains a trivial state machine to remember progress across invocations.
      */
     @SuppressWarnings("resource")
-    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception
     {
+        if (state == State.CLOSED)
+        {
+            in.readerIndex(in.writerIndex());
+            return;
+        }
+
         ByteBufDataInputPlus inputPlus = new ByteBufDataInputPlus(in);
         try
         {
@@ -145,7 +153,16 @@ public class MessageInHandlerPre40 extends BaseMessageInHandler
         }
         catch (Exception e)
         {
-            exceptionCaught(ctx, e);
+            // prevent any future attempts at reading messages from any inbound buffers, as we're already in a bad state
+            state = State.CLOSED;
+
+            // force the buffer to appear to be consumed, thereby exiting the ByteToMessageDecoder.callDecode() loop,
+            // and other paths in that class, more efficiently
+            in.readerIndex(in.writerIndex());
+
+            // throwing the exception up causes the ByteToMessageDecoder.callDecode() loop to exit. if we don't do that,
+            // we'll keep trying to process data out of the last received buffer (and it'll be really, really wrong)
+            throw e;
         }
     }
 
