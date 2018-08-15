@@ -100,7 +100,7 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
     {
         if (state == State.CLOSED)
         {
-            in.readerIndex(in.writerIndex());
+            in.skipBytes(in.readableBytes());
             return;
         }
 
@@ -115,7 +115,7 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
 
             // force the buffer to appear to be consumed, thereby exiting the ByteToMessageDecoder.callDecode() loop,
             // and other paths in that class, more efficiently
-            in.readerIndex(in.writerIndex());
+            in.skipBytes(in.readableBytes());
 
             // throwing the exception up causes the ByteToMessageDecoder.callDecode() loop to exit. if we don't do that,
             // we'll keep trying to process data out of the last received buffer (and it'll be really, really wrong)
