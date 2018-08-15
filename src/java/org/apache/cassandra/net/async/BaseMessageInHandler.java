@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 
 import com.google.common.annotations.VisibleForTesting;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,7 +95,35 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
     }
 
     // redeclared here to make the method public (for testing)
-    public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+    @VisibleForTesting
+    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception
+    {
+        if (state == State.CLOSED)
+        {
+            in.readerIndex(in.writerIndex());
+            return;
+        }
+
+        try
+        {
+            handleDecode(ctx, in, out);
+        }
+        catch (Exception e)
+        {
+            // prevent any future attempts at reading messages from any inbound buffers, as we're already in a bad state
+            state = State.CLOSED;
+
+            // force the buffer to appear to be consumed, thereby exiting the ByteToMessageDecoder.callDecode() loop,
+            // and other paths in that class, more efficiently
+            in.readerIndex(in.writerIndex());
+
+            // throwing the exception up causes the ByteToMessageDecoder.callDecode() loop to exit. if we don't do that,
+            // we'll keep trying to process data out of the last received buffer (and it'll be really, really wrong)
+            throw e;
+        }
+    }
+
+    public abstract void handleDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
 
     MessageHeader readFirstChunk(ByteBuf in) throws IOException
     {
@@ -162,6 +189,7 @@ public abstract class BaseMessageInHandler extends ByteToMessageDecoder
     }
 
     // for testing purposes only!!!
+    @VisibleForTesting
     public State getState()
     {
         return state;
