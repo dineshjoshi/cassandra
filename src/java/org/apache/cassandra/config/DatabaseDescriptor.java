@@ -1866,14 +1866,14 @@ public class DatabaseDescriptor
         conf.native_transport_max_concurrent_connections_per_ip = native_transport_max_concurrent_connections_per_ip;
     }
 
-    public static boolean getNativeTransportHonorOlderProtocols()
+    public static boolean getNativeTransportAllowOlderProtocols()
     {
-        return conf.native_transport_honor_older_protocols;
+        return conf.native_transport_allow_older_protocols;
     }
 
-    public static void setNativeTransportHonorOlderProtocols(boolean isEnabled)
+    public static void setNativeTransportAllowOlderProtocols(boolean isEnabled)
     {
-        conf.native_transport_honor_older_protocols = isEnabled;
+        conf.native_transport_allow_older_protocols = isEnabled;
     }
 
     public static double getCommitLogSyncGroupWindow()

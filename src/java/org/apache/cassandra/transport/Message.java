@@ -281,7 +281,7 @@ public abstract class Message
 
             try
             {
-                if (!DatabaseDescriptor.getNativeTransportHonorOlderProtocols() &&
+                if (!DatabaseDescriptor.getNativeTransportAllowOlderProtocols() &&
                         frame.header.version.isSmallerThan(ProtocolVersion.CURRENT))
                 {
                     throw new ProtocolException(String.format("Rejecting frame with version %s < %s.", frame.header

@@ -666,7 +666,7 @@ native_transport_port: 9042
 
 # Controls whether Cassandra honors older protocol versions
 # The default is true, which means older protocols will be honored.
-native_transport_honor_older_protocols: true
+native_transport_allow_older_protocols: true
 
 # The address or interface to bind the native transport server to.
 #
