@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.audit.AuditLogManager;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.service.ClientWarn;
 import org.apache.cassandra.transport.messages.*;
 import org.apache.cassandra.service.QueryState;
@@ -280,6 +281,14 @@ public abstract class Message
 
             try
             {
+                if (!DatabaseDescriptor.getNativeTransportHonorOlderProtocols() &&
+                        frame.header.version.isSmallerThan(ProtocolVersion.CURRENT))
+                {
+                    throw new ProtocolException(String.format("Rejecting frame with version %s < %s.", frame.header
+                                                                                                          .version,
+                                                              ProtocolVersion.CURRENT));
+                }
+
                 if (isCustomPayload && frame.header.version.isSmallerThan(ProtocolVersion.V4))
                     throw new ProtocolException("Received frame with CUSTOM_PAYLOAD flag for native protocol version < 4");
 

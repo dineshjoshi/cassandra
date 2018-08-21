@@ -152,6 +152,7 @@ public class Config
     public int native_transport_max_frame_size_in_mb = 256;
     public volatile long native_transport_max_concurrent_connections = -1L;
     public volatile long native_transport_max_concurrent_connections_per_ip = -1L;
+    public volatile boolean native_transport_honor_older_protocols = true;
 
     /**
      * Max size of values in SSTables, in MegaBytes.
