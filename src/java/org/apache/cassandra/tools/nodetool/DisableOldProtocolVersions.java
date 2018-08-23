@@ -22,7 +22,7 @@ import io.airlift.airline.Command;
 import org.apache.cassandra.tools.NodeProbe;
 import org.apache.cassandra.tools.NodeTool;
 
-@Command(name = "disableoldprotocolversions", description = "Enable old protocol versions")
+@Command(name = "disableoldprotocolversions", description = "Disable old protocol versions")
 public class DisableOldProtocolVersions extends NodeTool.NodeToolCmd
 {
     @Override
