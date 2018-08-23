@@ -20,10 +20,8 @@ package org.apache.cassandra.transport.frame.checksum;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.Optional;
 
 import com.google.common.collect.ImmutableTable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
