@@ -104,6 +104,8 @@ public class ChecksummingTransformer implements FrameBodyTransformer
     private static final ChecksummingTransformer CRC32_NO_COMPRESSION = new ChecksummingTransformer(ChecksumType.CRC32, null);
     private static final ChecksummingTransformer ADLER32_NO_COMPRESSION = new ChecksummingTransformer(ChecksumType.Adler32, null);
     private static final ImmutableTable<ChecksumType, Compressor, ChecksummingTransformer> transformers;
+    private static final int CHUNK_LEN_BYTES = 2;
+
     static
     {
         ImmutableTable.Builder<ChecksumType, Compressor, ChecksummingTransformer> builder = ImmutableTable.builder();
@@ -167,7 +169,7 @@ public class ChecksummingTransformer implements FrameBodyTransformer
 
         byte[] inBuf = new byte[blockSize];
         byte[] outBuf = new byte[maxCompressedLength(blockSize)];
-        byte[] chunkLengths = new byte[2];
+        byte[] chunkLengths = new byte[CHUNK_LEN_BYTES];
 
         int numCompressedChunks = 0;
         int readableBytes;
@@ -198,7 +200,7 @@ public class ChecksummingTransformer implements FrameBodyTransformer
             // protect us against a bogus length causing potential havoc on deserialization
             chunkLengths[0] = (byte) written;
             chunkLengths[1] = (byte) lengthToRead;
-            int lengthsChecksum = (int) checksum.of(chunkLengths, 0, 2);
+            int lengthsChecksum = (int) checksum.of(chunkLengths, 0, CHUNK_LEN_BYTES);
             ret.writeInt(lengthsChecksum);
 
             ret.writeBytes(outBuf, 0, written); // the actual content bytes, possibly compressed
@@ -219,7 +221,7 @@ public class ChecksummingTransformer implements FrameBodyTransformer
 
         byte[] buf = null;
         byte[] retBuf = new byte[inputBuf.readableBytes()];
-        byte[] chunkLengths = new byte[2];
+        byte[] chunkLengths = new byte[CHUNK_LEN_BYTES];
         for (int i = 0; i < numChunks; i++)
         {
             int compressedLength = inputBuf.readInt();
@@ -229,7 +231,7 @@ public class ChecksummingTransformer implements FrameBodyTransformer
             chunkLengths[1] = (byte) decompressedLength;
 
             // calculate checksum on lengths (decompressed and compressed) and make sure it matches
-            int calculatedLengthsChecksum = (int) checksum.of(chunkLengths, 0, 2);
+            int calculatedLengthsChecksum = (int) checksum.of(chunkLengths, 0, CHUNK_LEN_BYTES);
             // make sure checksum on lengths match
             if (lengthsChecksum != calculatedLengthsChecksum)
             {
