@@ -82,7 +82,7 @@ import org.apache.cassandra.utils.ChecksumType;
  * <p>
  * <strong>1.2. Checksum Compression Description</strong>
  * <p>
- * The entire cpayload is broken into n chunks each with a pair of checksums:
+ * The entire payload is broken into n chunks each with a pair of checksums:
  * <ul>
  * <li>[int]: compressed length of serialized bytes for this chunk (e.g. the length post compression)
  * <li>[int]: expected length of the decompressed bytes (e.g. the length after decompression)
