@@ -17,9 +17,9 @@
  */
 package org.apache.cassandra.transport;
 
-import java.util.ArrayList;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -32,21 +32,42 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
-import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.handler.codec.MessageToMessageEncoder;
-
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.EventLoop;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import org.apache.cassandra.audit.AuditLogManager;
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.service.ClientWarn;
-import org.apache.cassandra.transport.messages.*;
 import org.apache.cassandra.service.QueryState;
+import org.apache.cassandra.transport.messages.AuthChallenge;
+import org.apache.cassandra.transport.messages.AuthResponse;
+import org.apache.cassandra.transport.messages.AuthSuccess;
+import org.apache.cassandra.transport.messages.AuthenticateMessage;
+import org.apache.cassandra.transport.messages.BatchMessage;
+import org.apache.cassandra.transport.messages.ErrorMessage;
+import org.apache.cassandra.transport.messages.EventMessage;
+import org.apache.cassandra.transport.messages.ExecuteMessage;
+import org.apache.cassandra.transport.messages.OptionsMessage;
+import org.apache.cassandra.transport.messages.PrepareMessage;
+import org.apache.cassandra.transport.messages.QueryMessage;
+import org.apache.cassandra.transport.messages.ReadyMessage;
+import org.apache.cassandra.transport.messages.RegisterMessage;
+import org.apache.cassandra.transport.messages.ResultMessage;
+import org.apache.cassandra.transport.messages.StartupMessage;
+import org.apache.cassandra.transport.messages.SupportedMessage;
+import org.apache.cassandra.transport.messages.UnsupportedMessageCodec;
 import org.apache.cassandra.utils.JVMStabilityInspector;
 
 /**
@@ -281,14 +302,6 @@ public abstract class Message
 
             try
             {
-                if (!DatabaseDescriptor.getNativeTransportAllowOlderProtocols() &&
-                        frame.header.version.isSmallerThan(ProtocolVersion.CURRENT))
-                {
-                    throw new ProtocolException(String.format("Rejecting frame with version %s < %s.", frame.header
-                                                                                                          .version,
-                                                              ProtocolVersion.CURRENT));
-                }
-
                 if (isCustomPayload && frame.header.version.isSmallerThan(ProtocolVersion.V4))
                     throw new ProtocolException("Received frame with CUSTOM_PAYLOAD flag for native protocol version < 4");
 
