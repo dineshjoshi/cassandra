@@ -97,6 +97,11 @@ public class StreamManager implements StreamManagerMBean
             if (!isLocalDC)
                 interDCLimiter.acquire(toTransfer);
         }
+
+        public boolean isEnabled()
+        {
+            return !(limiter.getRate() == Double.MAX_VALUE);
+        }
     }
 
     private final StreamEventJMXNotifier notifier = new StreamEventJMXNotifier();

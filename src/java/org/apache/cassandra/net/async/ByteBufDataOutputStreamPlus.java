@@ -176,6 +176,12 @@ public class ByteBufDataOutputStreamPlus extends BufferedDataOutputStreamPlus
      */
     public long writeToChannel(FileChannel f, StreamRateLimiter limiter) throws IOException
     {
+        if (!limiter.isEnabled())
+        {
+            logger.info("Rate limiting is disabled. Unthrottling streaming.");
+            return writeToChannel(f);
+        }
+
         final long length = f.size();
         long bytesTransferred = 0;
 
@@ -207,6 +213,43 @@ public class ByteBufDataOutputStreamPlus extends BufferedDataOutputStreamPlus
             }
 
             return bytesTransferred;
+        }
+        catch (Exception e)
+        {
+            if (f.isOpen())
+                f.close();
+
+            throw e;
+        }
+    }
+
+    /**
+     * Writes all data in file channel to stream.
+     * Closes file channel when done
+     *
+     * @param f
+     * @return number of bytes transferred
+     * @throws IOException
+     */
+    private long writeToChannel(FileChannel f) throws IOException
+    {
+        long bytesTransferred = 0;
+
+        try
+        {
+            NonClosingDefaultFileRegion fileRegion = new NonClosingDefaultFileRegion(f, 0, f.size());
+
+            ChannelPromise promise = channel.newPromise();
+            channel.writeAndFlush(fileRegion, promise);
+            promise.addListener(future -> {
+                handleBuffer(future, (int)f.size());
+
+                if ((!future.isSuccess()) && f.isOpen())
+                    f.close();
+            });
+            futureConsumer.accept(promise);
+            logger.trace("{} of {} (toRead {} cs {})", bytesTransferred, f.size(), (int)f.size(), f.isOpen());
+            return f.size();
         }
         catch (Exception e)
         {
