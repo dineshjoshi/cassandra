@@ -35,7 +35,9 @@ public class CompressorPerformance
                 SnappyCompressor.instance,  // warm up
                 DeflateCompressor.instance,
                 LZ4Compressor.create(Collections.emptyMap()),
-                SnappyCompressor.instance
+                SnappyCompressor.instance,
+                ZstdCompressor.getOrCreate(ZstdCompressor.FAST_COMPRESSION_LEVEL),
+                ZstdCompressor.getOrCreate(ZstdCompressor.DEFAULT_COMPRESSION_LEVEL)
         })
         {
             for (BufferType in: BufferType.values())
