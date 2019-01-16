@@ -229,27 +229,29 @@ public final class SSLFactory
     /**
      * get a netty {@link SslContext} instance
      */
-    public static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, ConnectionType connectionType,
+    public static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore,
                                            SocketType socketType) throws IOException
     {
-        return getSslContext(options, buildTruststore, connectionType, socketType, OpenSsl.isAvailable());
+        return getSslContext(options, buildTruststore, socketType, OpenSsl.isAvailable());
     }
 
     /**
      * Get a netty {@link SslContext} instance.
      */
     @VisibleForTesting
-    static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore, ConnectionType connectionType,
+    static SslContext getSslContext(EncryptionOptions options, boolean buildTruststore,
                                     SocketType socketType, boolean useOpenSsl) throws IOException
     {
-        CacheKey key = new CacheKey(options, connectionType, socketType);
+        CacheKey key = new CacheKey(options, socketType);
         SslContext sslContext;
 
         sslContext = cachedSslContexts.get(key);
         if (sslContext != null)
             return sslContext;
 
-        sslContext = createNettySslContext(options, buildTruststore, connectionType, socketType, useOpenSsl);
+        sslContext = createNettySslContext(options, buildTruststore, socketType, useOpenSsl);
+
+        // TODO: Swap iff the cert loading fails
         SslContext previous = cachedSslContexts.putIfAbsent(key, sslContext);
         if (previous == null)
             return sslContext;
@@ -261,7 +263,7 @@ public final class SSLFactory
     /**
      * Create a Netty {@link SslContext}
      */
-    static SslContext createNettySslContext(EncryptionOptions options, boolean buildTruststore, ConnectionType connectionType,
+    static SslContext createNettySslContext(EncryptionOptions options, boolean buildTruststore,
                                             SocketType socketType, boolean useOpenSsl) throws IOException
     {
         /*
@@ -361,13 +363,11 @@ public final class SSLFactory
     static class CacheKey
     {
         private final EncryptionOptions encryptionOptions;
-        private final ConnectionType connectionType;
         private final SocketType socketType;
 
-        public CacheKey(EncryptionOptions encryptionOptions, ConnectionType connectionType, SocketType socketType)
+        public CacheKey(EncryptionOptions encryptionOptions, SocketType socketType)
         {
             this.encryptionOptions = encryptionOptions;
-            this.connectionType = connectionType;
             this.socketType = socketType;
         }
 
@@ -376,15 +376,13 @@ public final class SSLFactory
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             CacheKey cacheKey = (CacheKey) o;
-            return (connectionType == cacheKey.connectionType &&
-                    socketType == cacheKey.socketType &&
+            return (socketType == cacheKey.socketType &&
                     Objects.equals(encryptionOptions, cacheKey.encryptionOptions));
         }
 
         public int hashCode()
         {
             int result = 0;
-            result += 31 * connectionType.hashCode();
             result += 31 * socketType.hashCode();
             result += 31 * encryptionOptions.hashCode();
             return result;
