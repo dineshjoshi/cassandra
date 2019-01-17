@@ -199,7 +199,7 @@ public class SSLFactoryTest
     }
 
     @Test(expected = RuntimeException.class)
-    public void testSslFactorySslInit_BadPassword_ThrowsException()
+    public void testSslFactorySslInit_BadPassword_ThrowsException() throws IOException
     {
         EncryptionOptions options = addKeystoreOptions(encryptionOptions);
         options.keystore_password = "bad password";
