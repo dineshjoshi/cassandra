@@ -243,7 +243,6 @@ public final class SSLFactory
 
         sslContext = createNettySslContext(options, buildTruststore, socketType, useOpenSsl);
 
-        // TODO: Swap iff the cert loading fails
         SslContext previous = cachedSslContexts.putIfAbsent(key, sslContext);
         if (previous == null)
             return sslContext;
