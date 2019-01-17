@@ -1718,6 +1718,7 @@ public final class MessagingService implements MessagingServiceMBean
     @Override
     public void reloadSslCertificates()
     {
-        SSLFactory.checkCertFilesForHotReloading();
+        SSLFactory.checkCertFilesForHotReloading(DatabaseDescriptor.getInternodeMessagingEncyptionOptions(),
+                                                 DatabaseDescriptor.getNativeProtocolEncryptionOptions());
     }
 }

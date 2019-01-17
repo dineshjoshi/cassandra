@@ -55,6 +55,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.cassandra.cache.CacheKey;
 import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.EncryptionOptions;
 
@@ -69,15 +70,6 @@ import org.apache.cassandra.config.EncryptionOptions;
 public final class SSLFactory
 {
     private static final Logger logger = LoggerFactory.getLogger(SSLFactory.class);
-
-    /**
-     * Indicator if a connection is shared with a client application ({@link ConnectionType#NATIVE_TRANSPORT})
-     * or another cassandra node  ({@link ConnectionType#INTERNODE_MESSAGING}).
-     */
-    public enum ConnectionType
-    {
-        NATIVE_TRANSPORT, INTERNODE_MESSAGING
-    }
 
     /**
      * Indicates if the process holds the inbound/listening end of the socket ({@link SocketType#SERVER})), or the
@@ -305,7 +297,8 @@ public final class SSLFactory
      * @throws IllegalStateException if {@link #initHotReloading(EncryptionOptions.ServerEncryptionOptions, EncryptionOptions, boolean)}
      *                               is not called first
      */
-    public static void checkCertFilesForHotReloading()
+    public static void checkCertFilesForHotReloading(EncryptionOptions.ServerEncryptionOptions serverOpts,
+                                                     EncryptionOptions clientOpts)
     {
         if (!isHotReloadingInitialized)
             throw new IllegalStateException("Hot reloading functionality has not been initialized.");
@@ -315,49 +308,105 @@ public final class SSLFactory
         if (hotReloadableFiles.stream().anyMatch(HotReloadableFile::shouldReload))
         {
             logger.info("SSL certificates have been updated. Reseting the ssl contexts for new connections.");
-            cachedSslContexts.clear();
+            try
+            {
+                validateSslCerts(serverOpts, clientOpts);
+                cachedSslContexts.clear();
+            } catch(Exception e)
+            {
+                logger.error("Failed to hot reload the SSL Certificates! Please check the certificate files.", e);
+            }
         }
     }
 
     /**
      * Determines whether to hot reload certificates and schedules a periodic task for it.
      *
-     * @param serverEncryptionOptions
-     * @param clientEncryptionOptions
+     * @param serverOpts
+     * @param clientOpts
      */
-    public static synchronized void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverEncryptionOptions,
-                                                     EncryptionOptions clientEncryptionOptions,
-                                                     boolean force)
+    public static synchronized void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverOpts,
+                                                     EncryptionOptions clientOpts,
+                                                     boolean force) throws IOException
     {
         if (isHotReloadingInitialized && !force)
             return;
 
         logger.debug("Initializing hot reloading SSLContext");
 
+        validateSslCerts(serverOpts, clientOpts);
+
         List<HotReloadableFile> fileList = new ArrayList<>();
 
-        if (serverEncryptionOptions.enabled)
+        if (serverOpts.enabled)
         {
-            fileList.add(new HotReloadableFile(serverEncryptionOptions.keystore));
-            fileList.add(new HotReloadableFile(serverEncryptionOptions.truststore));
+            fileList.add(new HotReloadableFile(serverOpts.keystore));
+            fileList.add(new HotReloadableFile(serverOpts.truststore));
         }
 
-        if (clientEncryptionOptions.enabled)
+        if (clientOpts.enabled)
         {
-            fileList.add(new HotReloadableFile(clientEncryptionOptions.keystore));
-            fileList.add(new HotReloadableFile(clientEncryptionOptions.truststore));
+            fileList.add(new HotReloadableFile(clientOpts.keystore));
+            fileList.add(new HotReloadableFile(clientOpts.truststore));
         }
 
         hotReloadableFiles = ImmutableList.copyOf(fileList);
 
         if (!isHotReloadingInitialized)
         {
-            ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(SSLFactory::checkCertFilesForHotReloading,
+            ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(() -> checkCertFilesForHotReloading(serverOpts, clientOpts),
                                                                      DEFAULT_HOT_RELOAD_INITIAL_DELAY_SEC,
                                                                      DEFAULT_HOT_RELOAD_PERIOD_SEC, TimeUnit.SECONDS);
         }
 
         isHotReloadingInitialized = true;
+    }
+
+
+    /**
+     * Sanity checks all certificates to ensure we can actually load them
+     */
+    public static void validateSslCerts(EncryptionOptions.ServerEncryptionOptions serverOpts, EncryptionOptions clientOpts) throws IOException
+    {
+        try
+        {
+            // Ensure we're able to create both server & client sslContexts
+            if (serverOpts != null && serverOpts.enabled)
+            {
+                SslContext sslCtxServer = createNettySslContext(serverOpts, true, SocketType.SERVER,
+                                                                OpenSsl.isAvailable());
+
+                SslContext sslCtxClient = createNettySslContext(serverOpts, true, SocketType.CLIENT,
+                                                                OpenSsl.isAvailable());
+
+                if (sslCtxServer == null || sslCtxClient == null)
+                    throw new IOException("Could not create SslContext");
+
+            }
+        } catch (Exception e)
+        {
+            throw new IOException("Failed to create SSL context using server_encryption_options!", e);
+        }
+
+        try
+        {
+            // Ensure we're able to create both server & client sslContexts
+            if (clientOpts != null && clientOpts.enabled)
+            {
+                SslContext sslCtxServer = createNettySslContext(clientOpts, true,
+                                                                SocketType.SERVER, OpenSsl.isAvailable());
+
+                SslContext sslCtxClient = createNettySslContext(clientOpts, true,
+                                                                SocketType.CLIENT, OpenSsl.isAvailable());
+
+                if (sslCtxServer == null || sslCtxClient == null)
+                    throw new IOException("Could not create SslContext using client_encryption_options");
+
+            }
+        } catch (Exception e)
+        {
+            throw new IOException("Failed to create SSL context!", e);
+        }
     }
 
     static class CacheKey
