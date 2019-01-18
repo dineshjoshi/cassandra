@@ -372,10 +372,10 @@ public final class SSLFactory
             // Ensure we're able to create both server & client sslContexts
             if (serverOpts != null && serverOpts.enabled)
             {
-                SslContext sslCtxServer = createNettySslContext(serverOpts, true, SocketType.SERVER,
+                SslContext sslCtxServer = createNettySslContext(serverOpts, serverOpts.require_client_auth, SocketType.SERVER,
                                                                 OpenSsl.isAvailable());
 
-                SslContext sslCtxClient = createNettySslContext(serverOpts, true, SocketType.CLIENT,
+                SslContext sslCtxClient = createNettySslContext(serverOpts, serverOpts.require_client_auth, SocketType.CLIENT,
                                                                 OpenSsl.isAvailable());
 
                 if (sslCtxServer == null || sslCtxClient == null)
@@ -392,10 +392,10 @@ public final class SSLFactory
             // Ensure we're able to create both server & client sslContexts
             if (clientOpts != null && clientOpts.enabled)
             {
-                SslContext sslCtxServer = createNettySslContext(clientOpts, true,
+                SslContext sslCtxServer = createNettySslContext(clientOpts, serverOpts.require_client_auth,
                                                                 SocketType.SERVER, OpenSsl.isAvailable());
 
-                SslContext sslCtxClient = createNettySslContext(clientOpts, true,
+                SslContext sslCtxClient = createNettySslContext(clientOpts, serverOpts.require_client_auth,
                                                                 SocketType.CLIENT, OpenSsl.isAvailable());
 
                 if (sslCtxServer == null || sslCtxClient == null)
