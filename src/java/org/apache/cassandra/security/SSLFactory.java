@@ -384,8 +384,8 @@ public final class SSLFactory
             // Ensure we're able to create both server & client sslContexts
             if (clientOpts != null && clientOpts.enabled)
             {
-                createNettySslContext(clientOpts, serverOpts.require_client_auth, SocketType.SERVER, OpenSsl.isAvailable());
-                createNettySslContext(clientOpts, serverOpts.require_client_auth, SocketType.CLIENT, OpenSsl.isAvailable());
+                createNettySslContext(clientOpts, clientOpts.require_client_auth, SocketType.SERVER, OpenSsl.isAvailable());
+                createNettySslContext(clientOpts, clientOpts.require_client_auth, SocketType.CLIENT, OpenSsl.isAvailable());
             }
         } catch (Exception e)
         {
