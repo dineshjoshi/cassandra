@@ -55,7 +55,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.ReferenceCountUtil;
-import org.apache.cassandra.cache.CacheKey;
 import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.EncryptionOptions;
 
