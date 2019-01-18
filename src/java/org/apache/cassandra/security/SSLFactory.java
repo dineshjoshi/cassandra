@@ -321,8 +321,8 @@ public final class SSLFactory
     /**
      * Determines whether to hot reload certificates and schedules a periodic task for it.
      *
-     * @param serverOpts
-     * @param clientOpts
+     * @param serverOpts Server encryption options (Internode)
+     * @param clientOpts Client encryption options (Native Protocol)
      */
     public static synchronized void initHotReloading(EncryptionOptions.ServerEncryptionOptions serverOpts,
                                                      EncryptionOptions clientOpts,
@@ -337,13 +337,13 @@ public final class SSLFactory
 
         List<HotReloadableFile> fileList = new ArrayList<>();
 
-        if (serverOpts.enabled)
+        if (serverOpts != null && serverOpts.enabled)
         {
             fileList.add(new HotReloadableFile(serverOpts.keystore));
             fileList.add(new HotReloadableFile(serverOpts.truststore));
         }
 
-        if (clientOpts.enabled)
+        if (clientOpts != null && clientOpts.enabled)
         {
             fileList.add(new HotReloadableFile(clientOpts.keystore));
             fileList.add(new HotReloadableFile(clientOpts.truststore));
@@ -372,15 +372,8 @@ public final class SSLFactory
             // Ensure we're able to create both server & client sslContexts
             if (serverOpts != null && serverOpts.enabled)
             {
-                SslContext sslCtxServer = createNettySslContext(serverOpts, serverOpts.require_client_auth, SocketType.SERVER,
-                                                                OpenSsl.isAvailable());
-
-                SslContext sslCtxClient = createNettySslContext(serverOpts, serverOpts.require_client_auth, SocketType.CLIENT,
-                                                                OpenSsl.isAvailable());
-
-                if (sslCtxServer == null || sslCtxClient == null)
-                    throw new IOException("Could not create SslContext");
-
+                createNettySslContext(serverOpts, serverOpts.require_client_auth, SocketType.SERVER, OpenSsl.isAvailable());
+                createNettySslContext(serverOpts, serverOpts.require_client_auth, SocketType.CLIENT, OpenSsl.isAvailable());
             }
         } catch (Exception e)
         {
@@ -392,19 +385,12 @@ public final class SSLFactory
             // Ensure we're able to create both server & client sslContexts
             if (clientOpts != null && clientOpts.enabled)
             {
-                SslContext sslCtxServer = createNettySslContext(clientOpts, serverOpts.require_client_auth,
-                                                                SocketType.SERVER, OpenSsl.isAvailable());
-
-                SslContext sslCtxClient = createNettySslContext(clientOpts, serverOpts.require_client_auth,
-                                                                SocketType.CLIENT, OpenSsl.isAvailable());
-
-                if (sslCtxServer == null || sslCtxClient == null)
-                    throw new IOException("Could not create SslContext using client_encryption_options");
-
+                createNettySslContext(clientOpts, serverOpts.require_client_auth, SocketType.SERVER, OpenSsl.isAvailable());
+                createNettySslContext(clientOpts, serverOpts.require_client_auth, SocketType.CLIENT, OpenSsl.isAvailable());
             }
         } catch (Exception e)
         {
-            throw new IOException("Failed to create SSL context!", e);
+            throw new IOException("Failed to create SSL context using client_encryption_options!", e);
         }
     }
 
