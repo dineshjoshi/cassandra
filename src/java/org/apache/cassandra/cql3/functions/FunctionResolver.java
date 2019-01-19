@@ -70,7 +70,11 @@ public final class FunctionResolver
     throws InvalidRequestException
     {
         if (name.equalsNativeFunction(TOKEN_FUNCTION_NAME))
-            return new TokenFct(Schema.instance.getTableMetadata(receiverKs, receiverCf));
+        {
+            Function fn = new TokenFct(Schema.instance.getTableMetadata(receiverKs, receiverCf));
+            validateTypes(keyspace, fn, providedArgs, receiverKs, receiverCf);
+            return fn;
+        }
 
         // The toJson() function can accept any type of argument, so instances of it are not pre-declared.  Instead,
         // we create new instances as needed while handling selectors (which is the only place that toJson() is supported,
