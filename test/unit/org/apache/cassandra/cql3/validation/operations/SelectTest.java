@@ -3097,4 +3097,36 @@ public class SelectTest extends CQLTester
 
         assertRowCount(execute("SELECT token(k1, k2) FROM %s"), 1);
     }
+
+    @Test
+    public void testTokenFctArgumentCountShouldMatch() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
+        assertRowCount(execute("SELECT token(k1, k2) FROM %s"), 1);
+    }
+
+    @Test
+    public void testTokenFctRejectsInvalidColumnName() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
+        assertInvalidMessage("Undefined column name ", "SELECT token(s1, k1) FROM %s");
+    }
+
+    @Test
+    public void testTokenFctRejectsInvalidColumnType() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
+        assertInvalidMessage("Type error: k2 cannot be passed as argument 0 of function system.token of type uuid", "SELECT token(k2, k1) FROM %s");
+    }
+
+    @Test
+    public void testTokenFctRejectsInvalidColumnNameAndCount() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
+        assertInvalidMessage("Undefined column name s1", "SELECT token(s1) FROM %s");
+    }
 }
