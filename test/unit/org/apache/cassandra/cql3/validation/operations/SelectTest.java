@@ -3088,13 +3088,10 @@ public class SelectTest extends CQLTester
 
     // CASSANDRA-14989
     @Test
-    public void testTokenFctArgumentValidation() throws Throwable
+    public void testTokenFctAcceptsValidArguments() throws Throwable
     {
         createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
-
         execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
-        assertInvalidMessage("Invalid number of arguments in call to function", "SELECT token(k1) FROM %s");
-
         assertRowCount(execute("SELECT token(k1, k2) FROM %s"), 1);
     }
 
