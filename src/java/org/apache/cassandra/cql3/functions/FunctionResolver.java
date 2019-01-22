@@ -69,12 +69,12 @@ public final class FunctionResolver
                                AbstractType<?> receiverType)
     throws InvalidRequestException
     {
-        Function fn = checkForNativeFunctions(keyspace, name, providedArgs, receiverKs, receiverCf, receiverType);
+        Function fn = maybeNativeFunction(keyspace, name, providedArgs, receiverKs, receiverCf, receiverType);
 
         if (fn != null)
             return fn;
 
-        Collection<Function> candidates = getCandidateFunctions(keyspace, name);
+        Collection<Function> candidates = getFunctionCandidates(keyspace, name);
 
         if (candidates.isEmpty())
             return null;
@@ -151,12 +151,12 @@ public final class FunctionResolver
         return compatibles.get(0);
     }
 
-    private static Function checkForNativeFunctions(String keyspace,
-                                                    FunctionName name,
-                                                    List<? extends AssignmentTestable> providedArgs,
-                                                    String receiverKs,
-                                                    String receiverCf,
-                                                    AbstractType<?> receiverType)
+    private static Function maybeNativeFunction(String keyspace,
+                                                FunctionName name,
+                                                List<? extends AssignmentTestable> providedArgs,
+                                                String receiverKs,
+                                                String receiverCf,
+                                                AbstractType<?> receiverType)
     {
         if (name.equalsNativeFunction(TOKEN_FUNCTION_NAME))
         {
@@ -182,7 +182,7 @@ public final class FunctionResolver
         return null;
     }
 
-    private static Collection<Function> getCandidateFunctions(String keyspace, FunctionName name)
+    private static Collection<Function> getFunctionCandidates(String keyspace, FunctionName name)
     {
         Collection<Function> candidates;
         if (!name.hasKeyspace())
