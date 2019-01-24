@@ -3121,15 +3121,42 @@ public class SelectTest extends CQLTester
     }
 
     @Test
-    public void testCreatingUDFWithSameNameAsBuiltin() throws Throwable
+    public void testCreatingUDFWithSameNameAsBuiltin_PrefersCompatibleArgs_SameKeyspace() throws Throwable
     {
         createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
         createFunctionOverload(KEYSPACE + ".token", "double",
                                "CREATE FUNCTION %s (val double) RETURNS null ON null INPUT RETURNS double LANGUAGE java AS 'return 10.0d;'");
         execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
-
         assertRows(execute("SELECT token(10) FROM %s"), row(10.0d));
+    }
+
+    @Test
+    public void testCreatingUDFWithSameNameAsBuiltin_FullyQualifiedFunctionNameWorks() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        createFunctionOverload(KEYSPACE + ".token", "double",
+                               "CREATE FUNCTION %s (val double) RETURNS null ON null INPUT RETURNS double LANGUAGE java AS 'return 10.0d;'");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
+        assertRows(execute("SELECT " + KEYSPACE + ".token(10) FROM %s"), row(10.0d));
+    }
+
+    @Test
+    public void testCreatingUDFWithSameNameAsBuiltin_PrefersCompatibleArgs() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        createFunctionOverload(KEYSPACE + ".token", "double",
+                               "CREATE FUNCTION %s (val double) RETURNS null ON null INPUT RETURNS double LANGUAGE java AS 'return 10.0d;'");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
         assertRowCount(execute("SELECT token(k1, k2) FROM %s"), 1);
+    }
+
+    @Test
+    public void testCreatingUDFWithSameNameAsBuiltin_FullyQualifiedFunctionNameWorks_SystemKeyspace() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        createFunctionOverload(KEYSPACE + ".token", "double",
+                               "CREATE FUNCTION %s (val double) RETURNS null ON null INPUT RETURNS double LANGUAGE java AS 'return 10.0d;'");
+        execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
         assertRowCount(execute("SELECT system.token(k1, k2) FROM %s"), 1);
     }
 }
