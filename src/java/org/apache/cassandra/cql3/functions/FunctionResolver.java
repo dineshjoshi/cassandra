@@ -163,7 +163,11 @@ public final class FunctionResolver
 
         // Similarly, we can only use fromJson when we know the receiver type (such as inserts)
         if (name.equalsNativeFunction(FromJsonFct.NAME))
+        {
+            if (receiverType == null)
+                throw new InvalidRequestException("fromJson() cannot be used in the selection clause of a SELECT statement");
             candidates.add(FromJsonFct.getInstance(receiverType));
+        }
 
         if (!name.hasKeyspace())
         {
