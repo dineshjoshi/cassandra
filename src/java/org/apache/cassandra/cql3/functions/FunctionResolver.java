@@ -69,12 +69,7 @@ public final class FunctionResolver
                                AbstractType<?> receiverType)
     throws InvalidRequestException
     {
-        Function fn = maybeNativeFunction(keyspace, name, providedArgs, receiverKs, receiverCf, receiverType);
-
-        if (fn != null)
-            return fn;
-
-        Collection<Function> candidates = getFunctionCandidates(keyspace, name);
+        Collection<Function> candidates = getFunctionCandidates(keyspace, name, receiverKs, receiverCf, receiverType);
 
         if (candidates.isEmpty())
             return null;
@@ -151,19 +146,14 @@ public final class FunctionResolver
         return compatibles.get(0);
     }
 
-    private static Function maybeNativeFunction(String keyspace,
-                                                FunctionName name,
-                                                List<? extends AssignmentTestable> providedArgs,
-                                                String receiverKs,
-                                                String receiverCf,
-                                                AbstractType<?> receiverType)
+    private static Collection<Function> getFunctionCandidates(String keyspace, FunctionName name, String receiverKs,
+                                                              String receiverCf,
+                                                              AbstractType<?> receiverType)
     {
+        Collection<Function> candidates = new ArrayList<>();
+
         if (name.equalsNativeFunction(TOKEN_FUNCTION_NAME))
-        {
-            Function fn = new TokenFct(Schema.instance.getTableMetadata(receiverKs, receiverCf));
-            validateTypes(keyspace, fn, providedArgs, receiverKs, receiverCf);
-            return fn;
-        }
+            candidates.add(new TokenFct(Schema.instance.getTableMetadata(receiverKs, receiverCf)));
 
         // The toJson() function can accept any type of argument, so instances of it are not pre-declared.  Instead,
         // we create new instances as needed while handling selectors (which is the only place that toJson() is supported,
@@ -173,22 +163,11 @@ public final class FunctionResolver
 
         // Similarly, we can only use fromJson when we know the receiver type (such as inserts)
         if (name.equalsNativeFunction(FromJsonFct.NAME))
-        {
-            if (receiverType == null)
-                throw new InvalidRequestException("fromJson() cannot be used in the selection clause of a SELECT statement");
-            return FromJsonFct.getInstance(receiverType);
-        }
+            candidates.add(FromJsonFct.getInstance(receiverType));
 
-        return null;
-    }
-
-    private static Collection<Function> getFunctionCandidates(String keyspace, FunctionName name)
-    {
-        Collection<Function> candidates;
         if (!name.hasKeyspace())
         {
             // function name not fully qualified
-            candidates = new ArrayList<>();
             // add 'SYSTEM' (native) candidates
             candidates.addAll(Schema.instance.getFunctions(name.asNativeFunction()));
             // add 'current keyspace' candidates
@@ -197,7 +176,7 @@ public final class FunctionResolver
         else
         {
             // function name is fully qualified (keyspace + name)
-            candidates = Schema.instance.getFunctions(name);
+            candidates.addAll(Schema.instance.getFunctions(name));
         }
         return candidates;
     }

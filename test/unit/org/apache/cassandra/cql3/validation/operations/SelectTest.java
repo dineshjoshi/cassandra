@@ -3120,10 +3120,15 @@ public class SelectTest extends CQLTester
     }
 
     @Test
-    public void testTokenFctRejectsInvalidColumnNameAndCount() throws Throwable
+    public void testCreatingUDFWithSameNameAsBuiltin() throws Throwable
     {
         createTable("CREATE TABLE %s (k1 uuid, k2 text, PRIMARY KEY ((k1, k2)))");
+        createFunctionOverload(KEYSPACE + ".token",
+                               "double", "CREATE FUNCTION %s (val double) RETURNS null ON null INPUT RETURNS double LANGUAGE java AS 'return 10.0d;'");
         execute("INSERT INTO %s (k1, k2) VALUES (uuid(), 'k2')");
-        assertInvalidMessage("Undefined column name s1", "SELECT token(s1) FROM %s");
+
+        assertRows(execute("SELECT token(10) FROM %s"), row(10.0d));
+        assertRowCount(execute("SELECT token(k1, k2) FROM %s"), 1);
+        assertRowCount(execute("SELECT system.token(k1, k2) FROM %s"), 1);
     }
 }
