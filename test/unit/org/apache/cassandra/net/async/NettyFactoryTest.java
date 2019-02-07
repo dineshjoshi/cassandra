@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.net.async;
 
-import java.net.InetSocketAddress;
+import java.io.IOException;
 import java.util.Optional;
 
 import com.google.common.net.InetAddresses;
@@ -43,7 +43,6 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.cassandra.auth.AllowAllInternodeAuthenticator;
 import org.apache.cassandra.auth.IInternodeAuthenticator;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.config.EncryptionOptions;
 import org.apache.cassandra.config.EncryptionOptions.ServerEncryptionOptions;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.locator.InetAddressAndPort;
@@ -53,6 +52,8 @@ import org.apache.cassandra.net.async.NettyFactory.OutboundInitializer;
 import org.apache.cassandra.service.NativeTransportService;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.NativeLibrary;
+
+import static org.junit.Assume.assumeTrue;
 
 public class NettyFactoryTest
 {
@@ -141,8 +142,14 @@ public class NettyFactoryTest
     }
 
     @Test(expected = ConfigurationException.class)
-    public void createServerChannel_UnbindableAddress()
+    public void createServerChannel_UnbindableAddress() throws IOException, InterruptedException
     {
+        // This check is required to avoid flakyness in the test due to different sysctl configurations.
+        // There are legitimate use-cases where we would want to enable net.ipv4.ip_nonlocal_bind but this
+        // setting interferes with this test.
+        if (FBUtilities.isLinux)
+            assumeTrue("non-local bind is enabled!", !isNonLocalBindEnabledOnLinuxIPv4());
+
         InetAddressAndPort addr = InetAddressAndPort.getByAddressOverrideDefaults(InetAddresses.forString("1.1.1.1"), 9876);
         InboundInitializer inboundInitializer = new InboundInitializer(AUTHENTICATOR, null, channelGroup);
         NettyFactory.instance.createInboundChannel(addr, inboundInitializer, receiveBufferSize);
@@ -332,5 +339,28 @@ public class NettyFactoryTest
         Assert.assertNull(channel.pipeline().get(SslHandler.class));
         outboundInitializer.initChannel(channel);
         Assert.assertNotNull(channel.pipeline().get(SslHandler.class));
+    }
+
+    /**
+     * This method determines if there is non-local binding enabled on Linux for IPv4.
+     *
+     * @return true or false depending on whether non-local binding is enabled.
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private boolean isNonLocalBindEnabledOnLinuxIPv4() throws IOException, InterruptedException
+    {
+        if (!FBUtilities.isLinux)
+            return false;
+
+        Process res = Runtime.getRuntime()
+                             .exec("sysctl -n net.ipv4.ip_nonlocal_bind");
+
+        res.waitFor();
+
+        if (res.exitValue() != 0)
+            throw new RuntimeException("Failed to execute sysctl: Exited with code " + res.exitValue());
+
+        return res.getInputStream().read() == 49;
     }
 }
