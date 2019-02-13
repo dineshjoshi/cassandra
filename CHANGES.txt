@@ -350,6 +350,12 @@
  * Anti-compaction temporarily corrupts sstable state for readers (CASSANDRA-15004)
 
 
+Merged from 2.2:
+ * Multi-version in-JVM dtests (CASSANDRA-14937)
+Merged from 2.1:
+ * CVE-2015-0886 Security vulnerability in jbcrypt is addressed (CASSANDRA-9384)
+
+
 3.11.4
  * Make stop-server.bat wait for Cassandra to terminate (CASSANDRA-14829)
  * Correct sstable sorting for garbagecollect and levelled compaction (CASSANDRA-14870)
