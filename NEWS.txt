@@ -42,6 +42,15 @@ restore snapshots created with the previous major version using the
 'sstableloader' tool. You can upgrade the file format of your snapshots
 using the provided 'sstableupgrade' tool.
 
+2.1.22
+======
+
+Upgrading
+---------
+    - Before you upgrade, confirm that `cassandra.auth_bcrypt_gensalt_log2_rounds` property
+      is set to value lower than 31 otherwise Cassandra will fail to start. See CASSANDRA-9384
+      for further details.
+
 2.1.21
 ======
 

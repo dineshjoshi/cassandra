@@ -59,9 +59,9 @@ public class PasswordAuthenticator implements ISaslAwareAuthenticator
     static int getGensaltLogRounds()
     {
         int rounds = Integer.getInteger(GENSALT_LOG2_ROUNDS_PROPERTY, 10);
-        if (rounds < 4 || rounds > 31)
+        if (rounds < 4 || rounds > 30)
             throw new RuntimeException(new ConfigurationException(String.format("Bad value for system property -D%s. " +
-                                                                                "Please use a value 4 and 31",
+                                                                                "Please use a value between 4 and 30.",
                                                                                 GENSALT_LOG2_ROUNDS_PROPERTY)));
         return rounds;
     }
