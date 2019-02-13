@@ -1,4 +1,5 @@
 3.11.4
+ * Improve `nodetool status -r` speed (CASSANDRA-14847)
  * Make stop-server.bat wait for Cassandra to terminate (CASSANDRA-14829)
  * Correct sstable sorting for garbagecollect and levelled compaction (CASSANDRA-14870)
 Merged from 3.0:
