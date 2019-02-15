@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.io.compress;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -31,6 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdOutputStream;
+import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.cassandra.utils.FastByteOperations;
 
 /**
  * ZSTD Compressor
@@ -136,10 +140,13 @@ public class ZstdCompressor implements ICompressor
     @Override
     public void uncompress(ByteBuffer input, ByteBuffer output) throws IOException
     {
-        int dsz = Zstd.decompress(output, input);
-
-        if (Zstd.isError(dsz))
-            throw new IOException(String.format("Decompression failed due to %s", Zstd.getErrorName(dsz)));
+        try
+        {
+            Zstd.decompress(output, input);
+        } catch (Exception e)
+        {
+            throw new IOException("Decompression failed", e);
+        }
     }
 
     /**
@@ -152,10 +159,23 @@ public class ZstdCompressor implements ICompressor
     @Override
     public void compress(ByteBuffer input, ByteBuffer output) throws IOException
     {
-        long csz = Zstd.compress(output, input, compressionLevel);
+        byte[] inBytes = ByteBufferUtil.getArray(input);
+        input.position(input.position() + inBytes.length);
+        ByteArrayOutputStream compressedStream = new ByteArrayOutputStream((int) Zstd.compressBound(inBytes.length));
 
-        if (Zstd.isError(csz))
-            throw new IOException(String.format("ZSTD compress failed due to %s", Zstd.getErrorName(csz)));
+        try (ZstdOutputStream out = new ZstdOutputStream(compressedStream, compressionLevel, true, true))
+        {
+            out.write(inBytes, 0, inBytes.length);
+            out.close(); // required for Zstd to write the checksum and complete the compression stream
+
+            byte[] compressed = compressedStream.toByteArray();
+            FastByteOperations.copy(ByteBuffer.wrap(compressed), 0, output, output.position(), compressed.length);
+            output.position(output.position() + compressed.length);
+        }
+        catch (Exception e)
+        {
+            throw new IOException("Compression failed", e);
+        }
     }
 
     /**
