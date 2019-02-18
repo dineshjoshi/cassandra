@@ -64,6 +64,7 @@
     <property name="test.burn.src" value="${test.dir}/burn"/>
     <property name="test.microbench.src" value="${test.dir}/microbench"/>
     <property name="test.distributed.src" value="${test.dir}/distributed"/>
+    <property name="test.compression_algo" value="LZ4"/>
     <property name="dist.dir" value="${build.dir}/dist"/>
     <property name="tmp.dir" value="${java.io.tmpdir}"/>
 
@@ -1484,7 +1485,7 @@
     <property name="compressed_yaml" value="${build.test.dir}/cassandra.compressed.yaml"/>
     <concat destfile="${compressed_yaml}">
       <fileset file="${test.conf}/cassandra.yaml"/>
-      <fileset file="${test.conf}/commitlog_compression.yaml"/>
+      <fileset file="${test.conf}/commitlog_compression_${test.compression_algo}.yaml"/>
     </concat>
     <path id="all-test-classes-path">
       <fileset dir="${test.unit.src}" includes="**/${test.name}.java" />
