@@ -473,7 +473,7 @@
           <dependency groupId="io.dropwizard.metrics" artifactId="metrics-core" version="3.1.5" />
           <dependency groupId="io.dropwizard.metrics" artifactId="metrics-jvm" version="3.1.5" />
           <dependency groupId="com.addthis.metrics" artifactId="reporter-config3" version="3.0.3" />
-          <dependency groupId="org.mindrot" artifactId="jbcrypt" version="0.3m" />
+          <dependency groupId="org.mindrot" artifactId="jbcrypt" version="0.4" />
           <dependency groupId="io.airlift" artifactId="airline" version="0.8" />
           <dependency groupId="io.netty" artifactId="netty-all" version="4.1.28.Final" />
           <dependency groupId="net.openhft" artifactId="chronicle-queue" version="${chronicle-queue.version}"/>

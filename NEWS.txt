@@ -113,6 +113,9 @@ New features
 
 Upgrading
 ---------
+    - Before you upgrade, confirm that `cassandra.auth_bcrypt_gensalt_log2_rounds` property
+      is set to value lower than 31 otherwise Cassandra will fail to start. See CASSANDRA-9384
+      for further details.
     - CASSANDRA-13241 lowered the default chunk_lengh_in_kb for compresesd tables from
       64kb to 16kb. For highly compressible data this can have a noticeable impact
       on space utilization. You may want to consider manually specifying this value.
