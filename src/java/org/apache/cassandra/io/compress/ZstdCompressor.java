@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.io.compress;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -32,9 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.luben.zstd.Zstd;
-import com.github.luben.zstd.ZstdOutputStream;
-import org.apache.cassandra.utils.ByteBufferUtil;
-import org.apache.cassandra.utils.FastByteOperations;
 
 /**
  * ZSTD Compressor
@@ -47,7 +43,9 @@ public class ZstdCompressor implements ICompressor
     public static final int FAST_COMPRESSION_LEVEL = Zstd.minCompressionLevel();
     public static final int BEST_COMPRESSION_LEVEL = Zstd.maxCompressionLevel();
 
+    // Compressor Defaults
     public static final int DEFAULT_COMPRESSION_LEVEL = 3;
+    private static final boolean ENABLE_CHECKSUM_FLAG = true;
 
     @VisibleForTesting
     public static final String COMPRESSION_LEVEL_OPTION_NAME = "compression_level";
@@ -103,7 +101,7 @@ public class ZstdCompressor implements ICompressor
     @Override
     public int initialCompressedBufferLength(int chunkLength)
     {
-        return (int) Zstd.compressBound(chunkLength);
+        return (int) Zstd.compressBound(chunkLength) + 4;
     }
 
     /**
@@ -159,20 +157,10 @@ public class ZstdCompressor implements ICompressor
     @Override
     public void compress(ByteBuffer input, ByteBuffer output) throws IOException
     {
-        byte[] inBytes = ByteBufferUtil.getArray(input);
-        input.position(input.position() + inBytes.length);
-        ByteArrayOutputStream compressedStream = new ByteArrayOutputStream((int) Zstd.compressBound(inBytes.length));
-
-        try (ZstdOutputStream out = new ZstdOutputStream(compressedStream, compressionLevel, true, true))
+        try
         {
-            out.write(inBytes, 0, inBytes.length);
-            out.close(); // required for Zstd to write the checksum and complete the compression stream
-
-            byte[] compressed = compressedStream.toByteArray();
-            FastByteOperations.copy(ByteBuffer.wrap(compressed), 0, output, output.position(), compressed.length);
-            output.position(output.position() + compressed.length);
-        }
-        catch (Exception e)
+            Zstd.compress(output, input, compressionLevel, ENABLE_CHECKSUM_FLAG);
+        } catch (Exception e)
         {
             throw new IOException("Compression failed", e);
         }
@@ -243,7 +231,7 @@ public class ZstdCompressor implements ICompressor
     }
 
 
-    /* Following methods required for testing */
+    @VisibleForTesting
     public int getCompressionLevel()
     {
         return compressionLevel;
