@@ -1,5 +1,5 @@
 4.0
- * Add Zstd compressor (CASSANDRA-14482)
+ * Add GC friendly Zstd compressor with checksumming support (CASSANDRA-14482)
  * SSL Cert Hot Reloading should check for sanity of the new keystore/truststore before loading it (CASSANDRA-14991)
  * Avoid leaking threads when failing anticompactions and rate limit anticompactions (CASSANDRA-15002)
  * Validate token() arguments early instead of throwing NPE at execution (CASSANDRA-14989)
