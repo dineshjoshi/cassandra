@@ -100,7 +100,7 @@ public class CompressorPerformance
             input.rewind();
         }
         long timed = System.nanoTime() - time;
-        System.out.format("Compressor %s %s->%s compress %.3f ns/b %.3f mb/s uncompress %.3f ns/b %.3f mb/s ratio %.2f:1.%s\\n",
+        System.out.format("Compressor %s %s->%s compress %.3f ns/b %.3f mb/s uncompress %.3f ns/b %.3f mb/s ratio %.2f:1.%s\n",
                           compressor.getClass().getSimpleName(),
                           in,
                           out,
