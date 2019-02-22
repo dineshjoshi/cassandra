@@ -101,7 +101,7 @@ public class ZstdCompressor implements ICompressor
     @Override
     public int initialCompressedBufferLength(int chunkLength)
     {
-        return (int) Zstd.compressBound(chunkLength) + 4;
+        return (int) Zstd.compressBound(chunkLength);
     }
 
     /**
