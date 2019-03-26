@@ -68,15 +68,6 @@
 
     <property name="doc.dir" value="${basedir}/doc"/>
 
-    <!--
-    We specify '8' instead of '1.8' in source.version to indicate that that this build requires Java 11 _and_ Java 8.
-    Builds that only run against Java 8, _have to_ specify '1.8' for source version. This makes it possible to let
-    CI scripts distinguish between "pure Java 8" releases and "hybrid" releases.
-    -->
-    <property name="source.version" value="8"/>
-    <property name="target.version" value="8"/>
-    <property name="release.version" value="10"/>
-
     <condition property="version" value="${base.version}">
       <isset property="release"/>
     </condition>
@@ -169,12 +160,40 @@
     <condition property="java.version.8">
         <equals arg1="${ant.java.version}" arg2="1.8"/>
     </condition>
+    <condition property="java.version.11">
+        <not><isset property="java.version.8"/></not>
+    </condition>
+    <fail><condition><not><or>
+        <isset property="java.version.8"/>
+        <isset property="java.version.11"/>
+    </or></not></condition></fail>
     <condition property="java11-jvmargs" value="-Djdk.attach.allowAttachSelf=true --add-exports java.sql/java.sql=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED --add-opens java.base/jdk.internal.module=ALL-UNNAMED --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-exports java.base/sun.nio.ch=ALL-UNNAMED --add-exports java.management.rmi/com.sun.jmx.remote.internal.rmi=ALL-UNNAMED --add-exports java.rmi/sun.rmi.registry=ALL-UNNAMED --add-exports java.rmi/sun.rmi.server=ALL-UNNAMED --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED">
         <not>
             <equals arg1="${ant.java.version}" arg2="1.8"/>
         </not>
     </condition>
     <property name="java11-jvmargs" value=""/>
+
+    <condition property="build.java.11">
+        <equals arg1="${use.jdk}" arg2="11"/>
+    </condition>
+
+    <echo message="ant java version: ${ant.java.version}"/>
+    <echo message="java.version.8: ${java.version.8}"/>
+    <echo message="build.java.11: ${build.java.11}"/>
+
+    <!--
+    We specify '8' instead of '1.8' in source.version to indicate that that this build requires Java 11 _and_ Java 8.
+    Builds that only run against Java 8, _have to_ specify '1.8' for source version. This makes it possible to let
+    CI scripts distinguish between "pure Java 8" releases and "hybrid" releases.
+    -->
+    <condition property="source.version" value="8" else="11">
+        <equals arg1="${java.version.8}" arg2="true"/>
+    </condition>
+    <condition property="target.version" value="8" else="11">
+        <equals arg1="${java.version.8}" arg2="true"/>
+    </condition>
+    <echo message="source/target: ${source.version}/${target.version}"/>
 
     <!--
          Add all the dependencies.
@@ -221,13 +240,38 @@
     </sequential>
   </macrodef>
 
+    <target name="validate-build-conf">
+        <condition property="use-jdk11">
+            <or>
+                <isset property="build.java.11"/>
+                <isset property="env.CASSANDRA_USE_JDK11"/>
+            </or>
+        </condition>
+        <fail message="-Duse.jdk=11/$CASSANDRA_USE_JDK11 cannot be set when building from java 8">
+            <condition>
+                <not><or>
+                    <not><isset property="java.version.8"/></not>
+                    <not><isset property="use-jdk11"/></not>
+                </or></not>
+            </condition>
+        </fail>
+        <fail message="-Duse.jdk=11/$CASSANDRA_USE_JDK11 must be set when building from java 11">
+            <condition>
+                <not><or>
+                    <isset property="java.version.8"/>
+                    <isset property="use-jdk11"/>
+                </or></not>
+            </condition>
+        </fail>
+    </target>
+
     <!--
         Setup the output directories.
     -->
-    <target name="init">
+    <target name="init" depends="validate-build-conf">
         <fail unless="is.source.artifact"
             message="Not a source artifact, stopping here." />
-        <mkdir dir="${build.classes.main}/META-INF/versions/11"/>
+        <mkdir dir="${build.classes.main}"/>
         <mkdir dir="${test.lib}"/>
         <mkdir dir="${test.classes}"/>
         <mkdir dir="${stress.test.classes}"/>
@@ -813,7 +857,7 @@
         <echo message="Compiling only for Java 8 ..."/>
         <javac fork="true"
                debug="true" debuglevel="${debuglevel}" encoding="utf-8"
-               destdir="${build.classes.main}" includeantruntime="false" source="8" target="8"
+               destdir="${build.classes.main}" includeantruntime="false" source="${source.version}" target="${target.version}"
                memorymaximumsize="512M">
             <src path="${build.src.java}"/>
             <src path="${build.src.gen-java}"/>
@@ -826,14 +870,10 @@
     <target name="_build_java11" unless="java.version.8">
         <!-- Note: we cannot use javac's 'release' option, as that does not allow accessing sun.misc.Unsafe nor
         Nashorn's ClassFilter class as any javac modules option is invalid for relase 8. -->
-        <fail message="JAVA8_HOME env variable must be set when building with java >= 11">
-            <condition><not><isset property="env.JAVA8_HOME"/></not></condition>
-        </fail>
-        <echo message="Compiling for Java 8 (using ${env.JAVA8_HOME}/bin/javac) ..."/>
+        <echo message="Compiling only for Java 11 ..."/>
         <javac fork="true"
                debug="true" debuglevel="${debuglevel}" encoding="utf-8"
-               destdir="${build.classes.main}" includeantruntime="false" source="8" target="8"
-               executable="${env.JAVA8_HOME}/bin/javac"
+               destdir="${build.classes.main}" includeantruntime="false" source="${source.version}" target="${target.version}"
                memorymaximumsize="512M">
             <src path="${build.src.java}"/>
             <src path="${build.src.gen-java}"/>
@@ -1259,8 +1299,7 @@
      includeantruntime="true"
      source="${source.version}"
      target="${target.version}"
-     encoding="utf-8"
-     executable="${env.JAVA8_HOME}/bin/javac">
+     encoding="utf-8">
      <classpath>
         <path refid="cassandra.classpath"/>
      </classpath>
