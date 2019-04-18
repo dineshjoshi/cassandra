@@ -170,6 +170,17 @@
 
     <resources id="_jvm11_arg_items">
         <string>-Djdk.attach.allowAttachSelf=true</string>
+
+        <string>-XX:+UseConcMarkSweepGC</string>
+        <string>-XX:+CMSParallelRemarkEnabled</string>
+        <string>-XX:SurvivorRatio=8</string>
+        <string>-XX:MaxTenuringThreshold=1</string>
+        <string>-XX:CMSInitiatingOccupancyFraction=75</string>
+        <string>-XX:+UseCMSInitiatingOccupancyOnly</string>
+        <string>-XX:CMSWaitDuration=10000</string>
+        <string>-XX:+CMSParallelInitialMarkEnabled</string>
+        <string>-XX:+CMSEdenChunksRecordAlways</string>
+
         <string>--add-exports java.base/jdk.internal.misc=ALL-UNNAMED</string>
         <string>--add-exports java.base/jdk.internal.ref=ALL-UNNAMED</string>
         <string>--add-exports java.base/sun.nio.ch=ALL-UNNAMED</string>
