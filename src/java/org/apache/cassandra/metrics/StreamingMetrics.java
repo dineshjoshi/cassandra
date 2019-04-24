@@ -47,8 +47,15 @@ public class StreamingMetrics
        StreamingMetrics metrics = instances.get(ip);
        if (metrics == null)
        {
-           metrics = new StreamingMetrics(ip);
-           instances.put(ip, metrics);
+           synchronized (instances)
+           {
+               metrics = instances.get(ip);
+               if (metrics == null)
+               {
+                   metrics = new StreamingMetrics(ip);
+                   instances.put(ip, metrics);
+               }
+           }
        }
        return metrics;
     }
