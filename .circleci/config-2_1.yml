@@ -159,6 +159,7 @@ executors:
       <<: *default_env_vars
       JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
       JDK_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      CASSANDRA_USE_JDK11: 1
 
 jobs:
   build:
@@ -359,7 +360,7 @@ commands:
           cd ~/cassandra
           # Loop to prevent failure due to maven-ant-tasks not downloading a jar..
           for x in $(seq 1 3); do
-              ${ANT_HOME}/bin/ant clean jar
+              ${ANT_HOME}/bin/ant clean realclean jar
               RETURN="$?"
               if [ "${RETURN}" -eq "0" ]; then
                   break
@@ -420,7 +421,7 @@ commands:
           export PATH=$JAVA_HOME/bin:$PATH
           time mv ~/cassandra /tmp
           cd /tmp/cassandra
-          ant clean <<parameters.target>>
+          ant clean realclean <<parameters.target>>
         no_output_timeout: <<parameters.no_output_timeout>>
     - store_test_results:
         path: /tmp/cassandra/build/test/output/
