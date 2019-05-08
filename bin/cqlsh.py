@@ -39,7 +39,6 @@ import getpass
 import optparse
 import os
 import platform
-import six
 import sys
 import traceback
 import warnings
