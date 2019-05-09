@@ -149,14 +149,6 @@
         }
     </script>
 
-    <!--
-    Build instructions for release builds / builds that support both Java 8 and 11:
-    - requires JDK 11 in JAVA_HOME
-    - requires JDK 8 in JAVA8_HOME
-
-    Build instructions for development buils that only support Java 8:
-    - requires JDK 8 in JAVA_HOME
-    -->
     <condition property="java.version.8">
         <equals arg1="${ant.java.version}" arg2="1.8"/>
     </condition>
@@ -214,11 +206,6 @@
     <echo message="java.version.8: ${java.version.8}"/>
     <echo message="build.java.11: ${build.java.11}"/>
 
-    <!--
-    We specify '8' instead of '1.8' in source.version to indicate that that this build requires Java 11 _and_ Java 8.
-    Builds that only run against Java 8, _have to_ specify '1.8' for source version. This makes it possible to let
-    CI scripts distinguish between "pure Java 8" releases and "hybrid" releases.
-    -->
     <condition property="source.version" value="8" else="11">
         <equals arg1="${java.version.8}" arg2="true"/>
     </condition>
