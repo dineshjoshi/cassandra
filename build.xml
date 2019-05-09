@@ -207,7 +207,7 @@
     <echo message="java11-jvmargs: ${java11-jvmargs}"/>
 
     <condition property="build.java.11">
-        <equals arg1="${use.jdk}" arg2="11"/>
+        <istrue value="${use.jdk11}"/>
     </condition>
 
     <echo message="ant java version: ${ant.java.version}"/>
@@ -276,10 +276,10 @@
         <condition property="use-jdk11">
             <or>
                 <isset property="build.java.11"/>
-                <isset property="env.CASSANDRA_USE_JDK11"/>
+                <istrue value="${env.CASSANDRA_USE_JDK11}"/>
             </or>
         </condition>
-        <fail message="-Duse.jdk=11/$CASSANDRA_USE_JDK11 cannot be set when building from java 8">
+        <fail message="-Duse.jdk11=true/$CASSANDRA_USE_JDK11=true cannot be set when building from java 8">
             <condition>
                 <not><or>
                     <not><isset property="java.version.8"/></not>
@@ -287,7 +287,7 @@
                 </or></not>
             </condition>
         </fail>
-        <fail message="-Duse.jdk=11/$CASSANDRA_USE_JDK11 must be set when building from java 11">
+        <fail message="-Duse.jdk11=true/$CASSANDRA_USE_JDK11=true must be set when building from java 11">
             <condition>
                 <not><or>
                     <isset property="java.version.8"/>
