@@ -386,7 +386,7 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           time mv ~/cassandra /tmp
           cd /tmp/cassandra
-          ant clean realclean stress-test
+          ant clean stress-test
         no_output_timeout: 15m
     - store_test_results:
         path: /tmp/cassandra/build/test/output/
@@ -536,7 +536,7 @@ jobs:
           cd ~/cassandra
           # Loop to prevent failure due to maven-ant-tasks not downloading a jar..
           for x in $(seq 1 3); do
-              ${ANT_HOME}/bin/ant clean realclean jar
+              ${ANT_HOME}/bin/ant clean jar
               RETURN="$?"
               if [ "${RETURN}" -eq "0" ]; then
                   break
@@ -674,7 +674,7 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           time mv ~/cassandra /tmp
           cd /tmp/cassandra
-          ant clean realclean test-jvm-dtest-forking
+          ant clean test-jvm-dtest-forking
         no_output_timeout: 15m
     - store_test_results:
         path: /tmp/cassandra/build/test/output/
@@ -741,7 +741,7 @@ jobs:
           cd ~/cassandra
           # Loop to prevent failure due to maven-ant-tasks not downloading a jar..
           for x in $(seq 1 3); do
-              ${ANT_HOME}/bin/ant clean realclean jar
+              ${ANT_HOME}/bin/ant clean jar
               RETURN="$?"
               if [ "${RETURN}" -eq "0" ]; then
                   break
@@ -796,7 +796,7 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           time mv ~/cassandra /tmp
           cd /tmp/cassandra
-          ant clean realclean long-test
+          ant clean long-test
         no_output_timeout: 15m
     - store_test_results:
         path: /tmp/cassandra/build/test/output/
@@ -838,7 +838,7 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           time mv ~/cassandra /tmp
           cd /tmp/cassandra
-          ant clean realclean fqltool-test
+          ant clean fqltool-test
         no_output_timeout: 15m
     - store_test_results:
         path: /tmp/cassandra/build/test/output/
