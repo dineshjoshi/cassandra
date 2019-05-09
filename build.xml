@@ -885,24 +885,10 @@
         depends="maven-ant-tasks-retrieve-build,build-project" description="Compile Cassandra classes"/>
     <target name="codecoverage" depends="jacoco-run,jacoco-report" description="Create code coverage report"/>
 
-    <target name="_build_java8" if="java.version.8">
-        <echo message="Compiling only for Java 8 ..."/>
-        <javac fork="true"
-               debug="true" debuglevel="${debuglevel}" encoding="utf-8"
-               destdir="${build.classes.main}" includeantruntime="false" source="${source.version}" target="${target.version}"
-               memorymaximumsize="512M">
-            <src path="${build.src.java}"/>
-            <src path="${build.src.gen-java}"/>
-            <compilerarg value="-XDignore.symbol.file"/>
-            <classpath>
-                <path refid="cassandra.classpath"/>
-            </classpath>
-        </javac>
-    </target>
-    <target name="_build_java11" unless="java.version.8">
+    <target name="_build_java">
         <!-- Note: we cannot use javac's 'release' option, as that does not allow accessing sun.misc.Unsafe nor
         Nashorn's ClassFilter class as any javac modules option is invalid for relase 8. -->
-        <echo message="Compiling only for Java 11 ..."/>
+        <echo message="Compiling for Java ${target.version}..."/>
         <javac fork="true"
                debug="true" debuglevel="${debuglevel}" encoding="utf-8"
                destdir="${build.classes.main}" includeantruntime="false" source="${source.version}" target="${target.version}"
@@ -915,12 +901,12 @@
             </classpath>
         </javac>
     </target>
+
     <target depends="init,gen-cql3-grammar,generate-cql-html,generate-jflex-java"
             name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
         <!-- Order matters! -->
-        <antcall target="_build_java8"/>
-        <antcall target="_build_java11"/>
+        <antcall target="_build_java"/>
         <antcall target="createVersionPropFile"/>
         <copy todir="${build.classes.main}">
             <fileset dir="${build.src.resources}" />
@@ -1289,39 +1275,10 @@
   </target>
 
   <target name="build-test" depends="_main-jar, stress-build, fqltool-build, write-poms" description="Compile test classes">
-    <antcall target="_build-test_java8"/>
-    <antcall target="_build-test_java11"/>
+    <antcall target="_build-test"/>
   </target>
 
-  <target name="_build-test_java8" if="java.version.8">
-    <javac
-     fork="true"
-     compiler="modern"
-     debug="true"
-     debuglevel="${debuglevel}"
-     destdir="${test.classes}"
-     includeantruntime="true"
-     source="${source.version}"
-     target="${target.version}"
-     encoding="utf-8">
-     <classpath>
-        <path refid="cassandra.classpath"/>
-     </classpath>
-     <compilerarg value="-XDignore.symbol.file"/>
-     <src path="${test.unit.src}"/>
-     <src path="${test.long.src}"/>
-     <src path="${test.burn.src}"/>
-     <src path="${test.microbench.src}"/>
-     <src path="${test.distributed.src}"/>
-    </javac>
-
-    <!-- Non-java resources needed by the test suite -->
-    <copy todir="${test.classes}">
-      <fileset dir="${test.resources}"/>
-    </copy>
-  </target>
-
-  <target name="_build-test_java11" unless="java.version.8">
+  <target name="_build-test">
     <javac
      fork="true"
      compiler="modern"
