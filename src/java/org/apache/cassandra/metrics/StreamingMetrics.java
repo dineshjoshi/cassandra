@@ -44,20 +44,7 @@ public class StreamingMetrics
 
     public static StreamingMetrics get(InetAddressAndPort ip)
     {
-       StreamingMetrics metrics = instances.get(ip);
-       if (metrics == null)
-       {
-           synchronized (instances)
-           {
-               metrics = instances.get(ip);
-               if (metrics == null)
-               {
-                   metrics = new StreamingMetrics(ip);
-                   instances.put(ip, metrics);
-               }
-           }
-       }
-       return metrics;
+       return instances.computeIfAbsent(ip, StreamingMetrics::new);
     }
 
     public StreamingMetrics(final InetAddressAndPort peer)
