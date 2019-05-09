@@ -266,7 +266,29 @@
                 <istrue value="${env.CASSANDRA_USE_JDK11}"/>
             </or>
         </condition>
-        <fail message="-Duse.jdk11=true/$CASSANDRA_USE_JDK11=true cannot be set when building from java 8">
+        <fail message="Inconsistent JDK11 options set">
+            <condition>
+                    <and>
+                        <istrue value="${env.CASSANDRA_USE_JDK11}"/>
+                        <isset property="use.jdk11"/>
+                        <not>
+                            <istrue value="${use.jdk11}"/>
+                        </not>
+                    </and>
+            </condition>
+                </fail>
+        <fail message="Inconsistent JDK11 options set">
+            <condition>
+                    <and>
+                        <isset property="env.CASSANDRA_USE_JDK11"/>
+                        <not>
+                            <istrue value="${env.CASSANDRA_USE_JDK11}"/>
+                        </not>
+                        <istrue value="${use.jdk11}"/>
+                    </and>
+            </condition>
+        </fail>
+        <fail message="-Duse.jdk11=true or $CASSANDRA_USE_JDK11=true cannot be set when building from java 8">
             <condition>
                 <not><or>
                     <not><isset property="java.version.8"/></not>
@@ -274,7 +296,7 @@
                 </or></not>
             </condition>
         </fail>
-        <fail message="-Duse.jdk11=true/$CASSANDRA_USE_JDK11=true must be set when building from java 11">
+        <fail message="-Duse.jdk11=true or $CASSANDRA_USE_JDK11=true must be set when building from java 11">
             <condition>
                 <not><or>
                     <isset property="java.version.8"/>
