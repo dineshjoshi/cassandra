@@ -123,11 +123,14 @@ public class ServerConnection extends Connection
 
     private X509Certificate[] certificates()
     {
+        if (!DatabaseDescriptor.getNativeProtocolEncryptionOptions().require_client_auth)
+            return null;
+
         SslHandler sslHandler = (SslHandler) channel().pipeline()
                                                       .get("ssl");
         X509Certificate[] certificates = null;
 
-        if (sslHandler != null && DatabaseDescriptor.getNativeProtocolEncryptionOptions().require_client_auth)
+        if (sslHandler != null)
         {
             try
             {
