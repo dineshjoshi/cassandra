@@ -19,6 +19,7 @@
 package org.apache.cassandra.metrics;
 
 import java.io.IOException;
+import java.util.function.LongSupplier;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,8 +37,8 @@ import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.service.EmbeddedCassandraService;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(OrderedJUnit4ClassRunner.class)
 public class TableMetricsTest extends SchemaLoader
@@ -172,5 +173,20 @@ public class TableMetricsTest extends SchemaLoader
         session.execute(String.format("UPDATE %s.%s SET id_c = id_c + 1 WHERE id = 1 AND val = 'val1'", KEYSPACE, COUNTER_TABLE));
         assertEquals(1, cfs.metric.coordinatorWriteLatency.getCount());
         assertTrue(cfs.metric.coordinatorWriteLatency.getMeanRate() > 0);
+    }
+
+    @Test
+    public void testMetricsCleanupOnDrop()
+    {
+        CassandraMetricsRegistry registry = CassandraMetricsRegistry.Metrics;
+        LongSupplier count = () -> registry.getNames().stream().filter((n) -> n.contains(TABLE)).count();
+
+        recreateTable();
+        // some metrics
+        assertTrue(count.getAsLong() > 0);
+        session.execute(String.format("DROP TABLE IF EXISTS %s.%s", KEYSPACE, TABLE));
+
+        // no metrics after drop
+        assertEquals(0, count.getAsLong());
     }
 }

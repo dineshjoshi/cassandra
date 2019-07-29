@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.metrics;
 
+import java.util.Arrays;
 import java.util.Set;
 
 import com.codahale.metrics.Counter;
@@ -27,7 +28,6 @@ import com.codahale.metrics.Timer;
 import org.apache.cassandra.db.ColumnFamilyStore;
 import org.apache.cassandra.db.Keyspace;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import static org.apache.cassandra.metrics.CassandraMetricsRegistry.Metrics;
@@ -281,7 +281,7 @@ public class KeyspaceMetrics
         viewLockAcquireTime =  Metrics.timer(factory.createMetricName("ViewLockAcquireTime"));
         viewReadTime = Metrics.timer(factory.createMetricName("ViewReadTime"));
         // add manually since histograms do not use createKeyspaceGauge method
-        allMetrics.addAll(Lists.newArrayList("SSTablesPerReadHistogram", "TombstoneScannedHistogram", "LiveScannedHistogram"));
+        allMetrics.addAll(Arrays.asList("SSTablesPerReadHistogram", "TombstoneScannedHistogram", "LiveScannedHistogram", "ColUpdateTimeDeltaHistogram", "ViewLockAcquireTime", "ViewReadTime"));
 
         casPrepare = new LatencyMetrics(factory, "CasPrepare");
         casPropose = new LatencyMetrics(factory, "CasPropose");
@@ -305,6 +305,11 @@ public class KeyspaceMetrics
 
         confirmedRepairedInconsistencies = Metrics.meter(factory.createMetricName("RepairedDataInconsistenciesConfirmed"));
         unconfirmedRepairedInconsistencies = Metrics.meter(factory.createMetricName("RepairedDataInconsistenciesUnconfirmed"));
+        // add remaining metrics manually
+        allMetrics.addAll(Arrays.asList("AntiCompactionTime", "BytesValidated", "PartitionsValidated",
+                "RepairPrepareTime", "RepairSyncTime", "RepairTime", "RepairedDataInconsistenciesConfirmed",
+                "RepairedDataInconsistenciesUnconfirmed", "ValidationTime", "WriteFailedIdealCL"));
+
     }
 
     /**
@@ -321,6 +326,9 @@ public class KeyspaceMetrics
         writeLatency.release();
         rangeLatency.release();
         idealCLWriteLatency.release();
+        casCommit.release();
+        casPrepare.release();
+        casPropose.release();
     }
 
     /**

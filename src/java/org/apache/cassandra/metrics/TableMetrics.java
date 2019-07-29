@@ -969,6 +969,9 @@ public class TableMetrics
         readLatency.release();
         writeLatency.release();
         rangeLatency.release();
+        casPrepare.release();
+        casPropose.release();
+        casCommit.release();
         Metrics.remove(factory.createMetricName("EstimatedPartitionSizeHistogram"), aliasFactory.createMetricName("EstimatedRowSizeHistogram"));
         Metrics.remove(factory.createMetricName("EstimatedPartitionCount"), aliasFactory.createMetricName("EstimatedRowCount"));
         Metrics.remove(factory.createMetricName("EstimatedColumnCountHistogram"), aliasFactory.createMetricName("EstimatedColumnCountHistogram"));
@@ -977,8 +980,9 @@ public class TableMetrics
         Metrics.remove(factory.createMetricName("CoordinatorScanLatency"), aliasFactory.createMetricName("CoordinatorScanLatency"));
         Metrics.remove(factory.createMetricName("CoordinatorWriteLatency"), aliasFactory.createMetricName("CoordinatorWriteLatency"));
         Metrics.remove(factory.createMetricName("WaitingOnFreeMemtableSpace"), aliasFactory.createMetricName("WaitingOnFreeMemtableSpace"));
+        Metrics.remove(factory.createMetricName("ReadRepairRequests"));
+        Metrics.remove(factory.createMetricName("ShortReadProtectionRequests"));
     }
-
 
     /**
      * Create a gauge that will be part of a merged version of all column families.  The global gauge
