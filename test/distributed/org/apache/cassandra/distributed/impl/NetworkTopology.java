@@ -71,12 +71,12 @@ public class NetworkTopology
 
     public String localRack(InetAddressAndPort key)
     {
-        return map.get(key).left;
+        return map.get(key).right;
     }
 
     public String localDC(InetAddressAndPort key)
     {
-        return map.get(key).right;
+        return map.get(key).left;
     }
 
     @SuppressWarnings("WeakerAccess")
