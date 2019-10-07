@@ -15,8 +15,8 @@
 # limitations under the License.
 
 from threading import Thread
-from io import StringIO
-from queue import Queue, Empty
+from six.moves import cStringIO as StringIO
+from six.moves.queue import Queue, Empty
 
 
 class WinPty(object):

@@ -47,13 +47,10 @@ from contextlib import contextmanager
 from glob import glob
 from uuid import UUID
 
-try:
-    # Python 3 modules
-    import configparser
-    from io import StringIO
-except ImportError:
-    import ConfigParser as configparser
-    from StringIO import StringIO
+from six.moves import configparser
+from six.moves import cStringIO as StringIO
+from six.moves import input
+from six import ensure_text
 
 if sys.version_info.major != 3 and (sys.version_info.major == 2 and sys.version_info.minor != 7):
     sys.exit("\nCQL Shell supports only Python 3 or Python 2.7\n")
@@ -864,15 +861,6 @@ class Shell(cmd.Cmd):
                 for table in list(self.get_keyspace_meta(ksname).tables.values())
                 for trigger in list(table.triggers.values())]
 
-    def _input(self, prompt):
-        """Call Python 3 input() or Python 2 raw_input()"""
-        lastcmd = None
-        if six.PY3:
-            lastcmd = input(prompt)
-        elif six.PY2:
-            lastcmd = raw_input(prompt).decode(self.encoding)
-        return lastcmd
-
     def reset_statement(self):
         self.reset_prompt()
         self.statement.truncate(0)
@@ -943,7 +931,7 @@ class Shell(cmd.Cmd):
 
     def get_input_line(self, prompt=''):
         if self.tty:
-            self.lastcmd = self._input(prompt)
+            self.lastcmd = input(prompt)
             line = self.lastcmd + '\n'
         else:
             self.lastcmd = self.stdin.readline()
@@ -951,8 +939,7 @@ class Shell(cmd.Cmd):
             if not len(line):
                 raise EOFError
         self.lineno += 1
-        if six.PY2 and isinstance(line, str):
-            line = unicode(line, encoding='utf-8')
+        line = ensure_text(line)
         return line
 
     def use_stdin_reader(self, until='', prompt=''):
@@ -1092,8 +1079,7 @@ class Shell(cmd.Cmd):
         self.tracing_enabled = tracing_was_enabled
 
     def perform_statement(self, statement):
-        if six.PY2:
-            statement = statement.encode(encoding='utf-8')
+        statement = ensure_text(statement)
 
         stmt = SimpleStatement(statement, consistency_level=self.consistency_level, serial_consistency_level=self.serial_consistency_level, fetch_size=self.page_size if self.use_paging else None)
         success, future = self.perform_simple_statement(stmt)
@@ -1149,9 +1135,7 @@ class Shell(cmd.Cmd):
         try:
             result = future.result()
         except CQL_ERRORS as err:
-            err_msg = err.message if hasattr(err, 'message') else str(err)
-            if six.PY2:
-                err_msg = err_msg.decode(encoding='utf-8')
+            err_msg = ensure_text(err.message if hasattr(err, 'message') else str(err))
             self.printerr(str(err.__class__.__name__) + ": " + err_msg)
         except Exception:
             import traceback
@@ -2210,8 +2194,7 @@ class Shell(cmd.Cmd):
             text = "{}".format(text)
 
         to_write = self.applycolor(text, color) + ('\n' if newline else '')
-        if six.PY2:
-            to_write = to_write.encode('utf8')
+        to_write = ensure_text(to_write)
         out.write(to_write)
 
     def flush_output(self):
