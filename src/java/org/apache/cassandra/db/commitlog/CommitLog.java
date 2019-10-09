@@ -80,7 +80,7 @@ public class CommitLog implements CommitLogMBean
         CommitLog log = new CommitLog(CommitLogArchiver.construct());
 
         MBeanWrapper.instance.registerMBean(log, "org.apache.cassandra.db:type=Commitlog");
-        return log.start();
+        return log;
     }
 
     @VisibleForTesting
@@ -116,7 +116,7 @@ public class CommitLog implements CommitLogMBean
         metrics.attach(executor, segmentManager);
     }
 
-    CommitLog start()
+    synchronized public CommitLog start()
     {
         segmentManager.start();
         executor.start();
