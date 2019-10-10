@@ -74,6 +74,7 @@ public class CommitLog implements CommitLogMBean
     final AbstractCommitLogService executor;
 
     volatile Configuration configuration;
+    volatile boolean started = false;
 
     private static CommitLog construct()
     {
@@ -118,8 +119,20 @@ public class CommitLog implements CommitLogMBean
 
     synchronized public CommitLog start()
     {
-        segmentManager.start();
-        executor.start();
+        if (!started)
+        {
+            try
+            {
+                started = true;
+                segmentManager.start();
+                executor.start();
+            }
+            catch (Throwable t)
+            {
+                started = false;
+                throw t;
+            }
+        }
         return this;
     }
 
