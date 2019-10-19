@@ -168,7 +168,6 @@ public class DatabaseDescriptor
         setConfig(config.get());
         applyAll();
         AuthConfig.applyAuth();
-        CommitLog.instance.start();
     }
 
     /**
