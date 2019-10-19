@@ -461,13 +461,15 @@ public abstract class AbstractCommitLogSegmentManager
      */
     public void shutdown()
     {
-        assert !shutdown;
-        shutdown = true;
+        if (!shutdown)
+        {
+            shutdown = true;
 
-        // Release the management thread and delete prepared segment.
-        // Do not block as another thread may claim the segment (this can happen during unit test initialization).
-        discardAvailableSegment();
-        wakeManager();
+            // Release the management thread and delete prepared segment.
+            // Do not block as another thread may claim the segment (this can happen during unit test initialization).
+            discardAvailableSegment();
+            wakeManager();
+        }
     }
 
     private void discardAvailableSegment()
@@ -487,8 +489,11 @@ public abstract class AbstractCommitLogSegmentManager
      */
     public void awaitTermination() throws InterruptedException
     {
-        managerThread.join();
-        managerThread = null;
+        if (managerThread != null)
+        {
+            managerThread.join();
+            managerThread = null;
+        }
 
         for (CommitLogSegment segment : activeSegments)
             segment.close();

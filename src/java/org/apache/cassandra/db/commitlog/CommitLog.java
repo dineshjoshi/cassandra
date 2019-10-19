@@ -117,6 +117,9 @@ public class CommitLog implements CommitLogMBean
         metrics.attach(executor, segmentManager);
     }
 
+    /**
+     * Tries to start the CommitLog if not already started.
+     */
     synchronized public CommitLog start()
     {
         if (started) return this;
@@ -449,9 +452,6 @@ public class CommitLog implements CommitLogMBean
      */
     public void stopUnsafe(boolean deleteSegments)
     {
-        if (!started)
-            instance.start();
-
         started = false;
         executor.shutdown();
         try
