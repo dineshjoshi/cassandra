@@ -74,13 +74,14 @@ public class CommitLog implements CommitLogMBean
     final AbstractCommitLogService executor;
 
     volatile Configuration configuration;
+    private volatile boolean started = false;
 
     private static CommitLog construct()
     {
         CommitLog log = new CommitLog(CommitLogArchiver.construct());
 
         MBeanWrapper.instance.registerMBean(log, "org.apache.cassandra.db:type=Commitlog");
-        return log.start();
+        return log;
     }
 
     @VisibleForTesting
@@ -116,10 +117,20 @@ public class CommitLog implements CommitLogMBean
         metrics.attach(executor, segmentManager);
     }
 
-    CommitLog start()
+    synchronized public CommitLog start()
     {
-        segmentManager.start();
-        executor.start();
+        if (started) return this;
+
+        try
+        {
+            segmentManager.start();
+            executor.start();
+            started = true;
+        } catch (Throwable t)
+        {
+            started = false;
+            throw t;
+        }
         return this;
     }
 
@@ -406,6 +417,7 @@ public class CommitLog implements CommitLogMBean
      */
     public void shutdownBlocking() throws InterruptedException
     {
+        started = false;
         executor.shutdown();
         executor.awaitTermination();
         segmentManager.shutdown();
@@ -437,6 +449,10 @@ public class CommitLog implements CommitLogMBean
      */
     public void stopUnsafe(boolean deleteSegments)
     {
+        if (!started)
+            instance.start();
+
+        started = false;
         executor.shutdown();
         try
         {
@@ -458,6 +474,7 @@ public class CommitLog implements CommitLogMBean
      */
     public int restartUnsafe() throws IOException
     {
+        started = false;
         return start().recoverSegmentsOnDisk();
     }
 
