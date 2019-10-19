@@ -51,6 +51,7 @@ import org.apache.cassandra.auth.IRoleManager;
 import org.apache.cassandra.config.Config.CommitLogSync;
 import org.apache.cassandra.config.EncryptionOptions.ServerEncryptionOptions.InternodeEncryption;
 import org.apache.cassandra.db.ConsistencyLevel;
+import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.io.FSWriteError;
@@ -167,6 +168,7 @@ public class DatabaseDescriptor
         setConfig(config.get());
         applyAll();
         AuthConfig.applyAuth();
+        CommitLog.instance.start();
     }
 
     /**
