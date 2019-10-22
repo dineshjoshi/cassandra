@@ -110,8 +110,6 @@ public abstract class AbstractCommitLogSegmentManager
                     {
                         assert availableSegment == null;
                         logger.trace("No segments in reserve; creating a fresh one");
-//                        if (1 == 1) throw new RuntimeException("Cause a deadlock");
-
                         availableSegment = createSegment();
                         if (shutdown)
                         {
