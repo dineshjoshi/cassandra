@@ -45,6 +45,7 @@ public class OutboundConnectionSettingsTest
     public static void before()
     {
         DatabaseDescriptor.daemonInitialization();
+        CommitLog.instance.start();
     }
 
     @Test (expected = IllegalArgumentException.class)
