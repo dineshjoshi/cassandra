@@ -20,6 +20,7 @@ package org.apache.cassandra.db.commitlog;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.function.Function;
 import java.util.zip.CRC32;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -78,7 +79,7 @@ public class CommitLog implements CommitLogMBean
 
     private static CommitLog construct()
     {
-        CommitLog log = new CommitLog(CommitLogArchiver.construct());
+        CommitLog log = new CommitLog(CommitLogArchiver.construct(), DatabaseDescriptor.getCommitLogSegmentMgrProvider());
 
         MBeanWrapper.instance.registerMBean(log, "org.apache.cassandra.db:type=Commitlog");
         return log;
@@ -86,6 +87,12 @@ public class CommitLog implements CommitLogMBean
 
     @VisibleForTesting
     CommitLog(CommitLogArchiver archiver)
+    {
+        this(archiver, DatabaseDescriptor.getCommitLogSegmentMgrProvider());
+    }
+
+    @VisibleForTesting
+    CommitLog(CommitLogArchiver archiver, Function<CommitLog, AbstractCommitLogSegmentManager> segmentManagerProvider)
     {
         this.configuration = new Configuration(DatabaseDescriptor.getCommitLogCompression(),
                                                DatabaseDescriptor.getEncryptionContext());
@@ -109,9 +116,7 @@ public class CommitLog implements CommitLogMBean
                 throw new IllegalArgumentException("Unknown commitlog service type: " + DatabaseDescriptor.getCommitLogSync());
         }
 
-        segmentManager = DatabaseDescriptor.isCDCEnabled()
-                         ? new CommitLogSegmentManagerCDC(this, DatabaseDescriptor.getCommitLogLocation())
-                         : new CommitLogSegmentManagerStandard(this, DatabaseDescriptor.getCommitLogLocation());
+        segmentManager = segmentManagerProvider.apply(this);
 
         // register metrics
         metrics.attach(executor, segmentManager);

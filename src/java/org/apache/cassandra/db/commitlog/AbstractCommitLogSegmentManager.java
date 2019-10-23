@@ -82,7 +82,8 @@ public abstract class AbstractCommitLogSegmentManager
      */
     private final AtomicLong size = new AtomicLong();
 
-    private Thread managerThread;
+    @VisibleForTesting
+    Thread managerThread;
     protected final CommitLog commitLog;
     private volatile boolean shutdown;
     private final BooleanSupplier managerThreadWaitCondition = () -> (availableSegment == null && !atSegmentBufferLimit()) || shutdown;
