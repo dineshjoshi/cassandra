@@ -21,6 +21,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
+import org.apache.cassandra.db.compaction.OperationType;
 import org.apache.cassandra.db.lifecycle.LifecycleNewTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ import org.apache.cassandra.db.rows.*;
 import org.apache.cassandra.db.transform.Transformation;
 import org.apache.cassandra.io.FSWriteError;
 import org.apache.cassandra.io.compress.CompressedSequentialWriter;
+import org.apache.cassandra.io.compress.ICompressor;
 import org.apache.cassandra.io.sstable.*;
 import org.apache.cassandra.io.sstable.format.SSTableFlushObserver;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
@@ -42,6 +44,7 @@ import org.apache.cassandra.io.sstable.metadata.MetadataComponent;
 import org.apache.cassandra.io.sstable.metadata.MetadataType;
 import org.apache.cassandra.io.sstable.metadata.StatsMetadata;
 import org.apache.cassandra.io.util.*;
+import org.apache.cassandra.schema.CompressionParams;
 import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.utils.*;
 import org.apache.cassandra.utils.concurrent.Transactional;
@@ -80,11 +83,26 @@ public class BigTableWriter extends SSTableWriter
 
         if (compression)
         {
+            CompressionParams compressionParams = metadata().params.compression;
+
+            if (lifecycleNewTracker.opType() == OperationType.FLUSH && compressionParams.isEnabled())
+            {
+                // When we are flushing out of the memtable throughput of the compressor is critical as flushes,
+                // especially of large tables, can queue up and potentially block writes.
+                // This optimization allows us to fall back to the fast default if a particular
+                // compression algorithm indicates we should. See CASSANDRA-15379 for more details.
+                if (!compressionParams.getSstableCompressor().suitableUses().contains(ICompressor.Uses.FAST_COMPRESSION))
+                {
+                    // The default is generally fast (LZ4 with 16KiB block size)
+                    compressionParams = CompressionParams.DEFAULT;
+                }
+            }
+
             dataFile = new CompressedSequentialWriter(new File(getFilename()),
                                              descriptor.filenameFor(Component.COMPRESSION_INFO),
                                              new File(descriptor.filenameFor(Component.DIGEST)),
                                              writerOption,
-                                             metadata().params.compression,
+                                             compressionParams,
                                              metadataCollector);
         }
         else
