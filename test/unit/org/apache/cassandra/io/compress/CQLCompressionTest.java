@@ -20,8 +20,12 @@ package org.apache.cassandra.io.compress;
 
 import java.util.Set;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.apache.cassandra.config.Config;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql3.CQLTester;
 import org.apache.cassandra.db.ColumnFamilyStore;
 import org.apache.cassandra.exceptions.ConfigurationException;
@@ -32,6 +36,22 @@ import static org.junit.Assert.assertTrue;
 
 public class CQLCompressionTest extends CQLTester
 {
+    private static Config.FlushCompression defaultFlush;
+
+    @BeforeClass
+    public static void setUpClass()
+    {
+        CQLTester.setUpClass();
+
+        defaultFlush = DatabaseDescriptor.getFlushCompression();
+    }
+
+    @Before
+    public void resetDefaultFlush()
+    {
+        DatabaseDescriptor.setFlushCompression(defaultFlush);
+    }
+
     @Test
     public void lz4ParamsTest()
     {
@@ -173,6 +193,66 @@ public class CQLCompressionTest extends CQLTester
         assertEquals(sstables.size(), 1);
         store.getLiveSSTables().forEach(sstable -> {
             assertTrue(sstable.getCompressionMetadata().parameters.getSstableCompressor() instanceof DeflateCompressor);
+        });
+    }
+
+    @Test
+    public void useNoCompressorOnFlushTest() throws Throwable
+    {
+        DatabaseDescriptor.setFlushCompression(Config.FlushCompression.none);
+        createTable("CREATE TABLE %s (k text PRIMARY KEY, v text) WITH compression = {'sstable_compression': 'LZ4Compressor'};");
+        ColumnFamilyStore store = flushTwice();
+
+        // Should flush as Noop compressor
+        Set<SSTableReader> sstables = store.getLiveSSTables();
+        sstables.forEach(sstable -> {
+            assertTrue(sstable.getCompressionMetadata().parameters.getSstableCompressor() instanceof NoopCompressor);
+        });
+
+        // Should compact to LZ4
+        compact();
+
+        sstables = store.getLiveSSTables();
+        assertEquals(sstables.size(), 1);
+        store.getLiveSSTables().forEach(sstable -> {
+            assertTrue(sstable.getCompressionMetadata().parameters.getSstableCompressor() instanceof LZ4Compressor);
+        });
+    }
+
+    @Test
+    public void useTableCompressorOnFlushTest() throws Throwable
+    {
+        DatabaseDescriptor.setFlushCompression(Config.FlushCompression.table);
+
+        createTable("CREATE TABLE %s (k text PRIMARY KEY, v text) WITH compression = {'sstable_compression': 'ZstdCompressor'};");
+        ColumnFamilyStore store = flushTwice();
+
+        // Should flush as Zstd
+        Set<SSTableReader> sstables = store.getLiveSSTables();
+        sstables.forEach(sstable -> {
+            assertTrue(sstable.getCompressionMetadata().parameters.getSstableCompressor() instanceof ZstdCompressor);
+        });
+    }
+
+    @Test
+    public void zstdTableFlushTest() throws Throwable
+    {
+        createTable("CREATE TABLE %s (k text PRIMARY KEY, v text) WITH compression = {'sstable_compression': 'ZstdCompressor'};");
+        ColumnFamilyStore store = flushTwice();
+
+        // Should flush as LZ4
+        Set<SSTableReader> sstables = store.getLiveSSTables();
+        sstables.forEach(sstable -> {
+            assertTrue(sstable.getCompressionMetadata().parameters.getSstableCompressor() instanceof LZ4Compressor);
+        });
+
+        // Should compact to Zstd
+        compact();
+
+        sstables = store.getLiveSSTables();
+        assertEquals(sstables.size(), 1);
+        store.getLiveSSTables().forEach(sstable -> {
+            assertTrue(sstable.getCompressionMetadata().parameters.getSstableCompressor() instanceof ZstdCompressor);
         });
     }
 

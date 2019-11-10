@@ -71,13 +71,13 @@ public interface ICompressor
     public Set<String> supportedOptions();
 
     /**
-     * Hints to Cassandra which uses this compressor is suitable for. For example a compression algorithm which gets
-     * really good ratio may trade off too much compression speed to be useful in certain compression heavy use cases
-     * such as flushes or hints.
+     * Hints to Cassandra which uses this compressor is recommended for. For example a compression algorithm which gets
+     * good compression ratio may trade off too much compression speed to be useful in certain compression heavy use
+     * cases such as flushes or mutation hints.
      *
-     * Note that Cassandra may ignore these hints, it is not a strict contract.
+     * Note that Cassandra may ignore these recommendations, it is not a strict contract.
      */
-    default Set<Uses> suitableUses()
+    default Set<Uses> recommendedUses()
     {
         return EnumSet.allOf(Uses.class);
     }

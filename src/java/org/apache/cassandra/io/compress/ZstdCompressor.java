@@ -242,7 +242,7 @@ public class ZstdCompressor implements ICompressor
     }
 
     @Override
-    public Set<Uses> suitableUses()
+    public Set<Uses> recommendedUses()
     {
         return suitableUses;
     }

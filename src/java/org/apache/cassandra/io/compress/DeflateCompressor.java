@@ -232,7 +232,7 @@ public class DeflateCompressor implements ICompressor
     }
 
     @Override
-    public Set<Uses> suitableUses()
+    public Set<Uses> recommendedUses()
     {
         return suitableUses;
     }
