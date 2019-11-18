@@ -25,6 +25,8 @@ import java.util.function.Predicate;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
 
+import org.apache.cassandra.distributed.impl.Versions;
+
 /**
  *
  * This class is usually used to test singletons. It ensure singletons can be unique in each test case.
@@ -64,7 +66,7 @@ public class CassandraIsolatedJunit4ClassRunner extends BlockJUnit4ClassRunner
     {
         public CassandraIsolatedClassLoader()
         {
-            super(((URLClassLoader)getSystemClassLoader()).getURLs());
+            super(Versions.CURRENT.classpath);
         }
 
         @Override
