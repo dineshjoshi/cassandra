@@ -127,7 +127,8 @@ public class CommitLog implements CommitLogMBean
      */
     synchronized public CommitLog start()
     {
-        if (started) return this;
+        if (started)
+            return this;
 
         try
         {
@@ -423,8 +424,11 @@ public class CommitLog implements CommitLogMBean
      * Shuts down the threads used by the commit log, blocking until completion.
      * TODO this should accept a timeout, and throw TimeoutException
      */
-    public void shutdownBlocking() throws InterruptedException
+    synchronized public void shutdownBlocking() throws InterruptedException
     {
+        if (!started)
+            return;
+
         started = false;
         executor.shutdown();
         executor.awaitTermination();
@@ -436,6 +440,7 @@ public class CommitLog implements CommitLogMBean
      * FOR TESTING PURPOSES
      * @return the number of files recovered
      */
+    @VisibleForTesting
     public int resetUnsafe(boolean deleteSegments) throws IOException
     {
         stopUnsafe(deleteSegments);
@@ -446,6 +451,7 @@ public class CommitLog implements CommitLogMBean
     /**
      * FOR TESTING PURPOSES.
      */
+    @VisibleForTesting
     public void resetConfiguration()
     {
         configuration = new Configuration(DatabaseDescriptor.getCommitLogCompression(),
@@ -455,6 +461,7 @@ public class CommitLog implements CommitLogMBean
     /**
      * FOR TESTING PURPOSES
      */
+    @VisibleForTesting
     public void stopUnsafe(boolean deleteSegments)
     {
         started = false;
@@ -477,6 +484,7 @@ public class CommitLog implements CommitLogMBean
     /**
      * FOR TESTING PURPOSES
      */
+    @VisibleForTesting
     public int restartUnsafe() throws IOException
     {
         started = false;
