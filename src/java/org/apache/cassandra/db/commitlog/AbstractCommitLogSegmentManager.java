@@ -460,15 +460,13 @@ public abstract class AbstractCommitLogSegmentManager
      */
     public void shutdown()
     {
-        if (!shutdown)
-        {
-            shutdown = true;
+        assert !shutdown;
+        shutdown = true;
 
-            // Release the management thread and delete prepared segment.
-            // Do not block as another thread may claim the segment (this can happen during unit test initialization).
-            discardAvailableSegment();
-            wakeManager();
-        }
+        // Release the management thread and delete prepared segment.
+        // Do not block as another thread may claim the segment (this can happen during unit test initialization).
+        discardAvailableSegment();
+        wakeManager();
     }
 
     private void discardAvailableSegment()
