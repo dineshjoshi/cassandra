@@ -441,7 +441,7 @@ public class CommitLog implements CommitLogMBean
      * @return the number of files recovered
      */
     @VisibleForTesting
-    public int resetUnsafe(boolean deleteSegments) throws IOException
+    synchronized public int resetUnsafe(boolean deleteSegments) throws IOException
     {
         stopUnsafe(deleteSegments);
         resetConfiguration();
@@ -452,7 +452,7 @@ public class CommitLog implements CommitLogMBean
      * FOR TESTING PURPOSES.
      */
     @VisibleForTesting
-    public void resetConfiguration()
+    synchronized public void resetConfiguration()
     {
         configuration = new Configuration(DatabaseDescriptor.getCommitLogCompression(),
                                           DatabaseDescriptor.getEncryptionContext());
@@ -462,7 +462,7 @@ public class CommitLog implements CommitLogMBean
      * FOR TESTING PURPOSES
      */
     @VisibleForTesting
-    public void stopUnsafe(boolean deleteSegments)
+    synchronized public void stopUnsafe(boolean deleteSegments)
     {
         started = false;
         executor.shutdown();
@@ -485,7 +485,7 @@ public class CommitLog implements CommitLogMBean
      * FOR TESTING PURPOSES
      */
     @VisibleForTesting
-    public int restartUnsafe() throws IOException
+    synchronized public int restartUnsafe() throws IOException
     {
         started = false;
         return start().recoverSegmentsOnDisk();
