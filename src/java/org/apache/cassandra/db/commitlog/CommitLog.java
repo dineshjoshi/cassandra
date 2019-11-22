@@ -75,7 +75,7 @@ public class CommitLog implements CommitLogMBean
     final AbstractCommitLogService executor;
 
     volatile Configuration configuration;
-    private volatile boolean started = false;
+    private boolean started = false;
 
     private static CommitLog construct()
     {
