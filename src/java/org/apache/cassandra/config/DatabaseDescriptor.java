@@ -97,10 +97,6 @@ public class DatabaseDescriptor
      */
     private static final int MAX_NUM_TOKENS = 1536;
 
-    /**
-     * Constant value for 2 MiB
-     */
-    private static final int TWO_MEBI_BYTES = 2 * 1024 * 1024;
     private static Config conf;
 
     /**
@@ -502,25 +498,20 @@ public class DatabaseDescriptor
 
         checkForLowestAcceptedTimeouts(conf);
 
-        if (conf.native_transport_max_frame_size_in_mb <= 0 || conf.native_transport_max_frame_size_in_mb >= 2048)
-            throw new ConfigurationException("native_transport_max_frame_size_in_mb must be positive value < 2048, but was "
-                                             + conf.native_transport_max_frame_size_in_mb, false);
+        checkValidForByteConversion(conf.native_transport_max_frame_size_in_mb,
+                                    "native_transport_max_frame_size_in_mb", ByteUnit.MEBI_BYTES);
 
-        if (conf.column_index_size_in_kb <= 0 || conf.column_index_size_in_kb >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("column_index_size_in_kb must be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + conf.column_index_size_in_kb, false);
+        checkValidForByteConversion(conf.column_index_size_in_kb,
+                                    "column_index_size_in_kb", ByteUnit.KIBI_BYTES);
 
-        if (conf.column_index_cache_size_in_kb <= 0 || conf.column_index_cache_size_in_kb >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("column_index_cache_size_in_kb must be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + conf.column_index_cache_size_in_kb, false);
+        checkValidForByteConversion(conf.column_index_cache_size_in_kb,
+                                    "column_index_cache_size_in_kb", ByteUnit.KIBI_BYTES);
 
-        if (conf.batch_size_warn_threshold_in_kb <= 0 || conf.batch_size_warn_threshold_in_kb >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("batch_size_warn_threshold_in_kb must be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + conf.batch_size_warn_threshold_in_kb, false);
+        checkValidForByteConversion(conf.batch_size_warn_threshold_in_kb,
+                                    "batch_size_warn_threshold_in_kb", ByteUnit.KIBI_BYTES);
 
-        if (conf.native_transport_frame_block_size_in_kb <= 0 || conf.native_transport_frame_block_size_in_kb >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("native_transport_frame_block_size_in_kb must be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + conf.native_transport_frame_block_size_in_kb, false);
+        checkValidForByteConversion(conf.native_transport_frame_block_size_in_kb,
+                                    "native_transport_frame_block_size_in_kb", ByteUnit.KIBI_BYTES);
 
         if (conf.native_transport_max_negotiable_protocol_version != null)
             logger.warn("The configuration option native_transport_max_negotiable_protocol_version has been deprecated " +
@@ -1387,36 +1378,36 @@ public class DatabaseDescriptor
 
     public static int getColumnIndexSize()
     {
-        return conf.column_index_size_in_kb * 1024;
+        return (int) ByteUnit.KIBI_BYTES.toBytes(conf.column_index_size_in_kb);
+    }
+
+    public static int getColumnIndexSizeInKB()
+    {
+        return conf.column_index_size_in_kb;
     }
 
     @VisibleForTesting
     public static void setColumnIndexSize(int val)
     {
-        if (val <= 0 || val >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("set column_index_size_in_kb value should be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + val);
+        checkValidForByteConversion(val, "column_index_size_in_kb", ByteUnit.KIBI_BYTES);
         conf.column_index_size_in_kb = val;
     }
 
     public static int getColumnIndexCacheSize()
     {
-        return conf.column_index_cache_size_in_kb * 1024;
+        return (int) ByteUnit.KIBI_BYTES.toBytes(conf.column_index_cache_size_in_kb);
     }
 
     @VisibleForTesting
     public static void setColumnIndexCacheSize(int val)
     {
-        if (val <= 0 || val >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("column_index_cache_size_in_kb value should be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + val);
-
+        checkValidForByteConversion(val, "column_index_cache_size_in_kb", ByteUnit.KIBI_BYTES);
         conf.column_index_cache_size_in_kb = val;
     }
 
     public static int getBatchSizeWarnThreshold()
     {
-        return conf.batch_size_warn_threshold_in_kb * 1024;
+        return (int) ByteUnit.KIBI_BYTES.toBytes(conf.batch_size_warn_threshold_in_kb);
     }
 
     public static int getBatchSizeWarnThresholdInKB()
@@ -1426,7 +1417,7 @@ public class DatabaseDescriptor
 
     public static long getBatchSizeFailThreshold()
     {
-        return conf.batch_size_fail_threshold_in_kb * 1024L;
+        return ByteUnit.KIBI_BYTES.toBytes(conf.batch_size_fail_threshold_in_kb);
     }
 
     public static int getBatchSizeFailThresholdInKB()
@@ -1441,10 +1432,7 @@ public class DatabaseDescriptor
 
     public static void setBatchSizeWarnThresholdInKB(int threshold)
     {
-        if (threshold <= 0 || threshold >= TWO_MEBI_BYTES)
-            throw new ConfigurationException("set batch_size_warn_threshold_in_kb value should be positive value < " + TWO_MEBI_BYTES +
-                                             ", but was " + threshold);
-
+        checkValidForByteConversion(threshold, "batch_size_warn_threshold_in_kb", ByteUnit.KIBI_BYTES);
         conf.batch_size_warn_threshold_in_kb = threshold;
     }
 
@@ -1733,7 +1721,7 @@ public class DatabaseDescriptor
         conf.compaction_throughput_mb_per_sec = value;
     }
 
-    public static long getCompactionLargePartitionWarningThreshold() { return conf.compaction_large_partition_warning_threshold_mb * 1024L * 1024L; }
+    public static long getCompactionLargePartitionWarningThreshold() { return ByteUnit.MEBI_BYTES.toBytes(conf.compaction_large_partition_warning_threshold_mb); }
 
     public static int getConcurrentValidations()
     {
@@ -1758,7 +1746,7 @@ public class DatabaseDescriptor
 
     public static long getMinFreeSpacePerDriveInBytes()
     {
-        return conf.min_free_space_per_drive_in_mb * 1024L * 1024L;
+        return ByteUnit.MEBI_BYTES.toBytes(conf.min_free_space_per_drive_in_mb);
     }
 
     public static boolean getDisableSTCSInL0()
@@ -1834,7 +1822,7 @@ public class DatabaseDescriptor
 
     public static int getMaxMutationSize()
     {
-        return conf.max_mutation_size_in_kb * 1024;
+        return (int) ByteUnit.KIBI_BYTES.toBytes(conf.max_mutation_size_in_kb);
     }
 
     public static int getTombstoneWarnThreshold()
@@ -1862,7 +1850,7 @@ public class DatabaseDescriptor
      */
     public static int getCommitLogSegmentSize()
     {
-        return conf.commitlog_segment_size_in_mb * 1024 * 1024;
+        return (int) ByteUnit.MEBI_BYTES.toBytes(conf.commitlog_segment_size_in_mb);
     }
 
     public static void setCommitLogSegmentSize(int sizeMegabytes)
@@ -2084,7 +2072,7 @@ public class DatabaseDescriptor
 
     public static int getNativeTransportMaxFrameSize()
     {
-        return conf.native_transport_max_frame_size_in_mb * 1024 * 1024;
+        return (int) ByteUnit.MEBI_BYTES.toBytes(conf.native_transport_max_frame_size_in_mb);
     }
 
     public static long getNativeTransportMaxConcurrentConnections()
@@ -2124,7 +2112,7 @@ public class DatabaseDescriptor
 
     public static int getNativeTransportFrameBlockSize()
     {
-        return conf.native_transport_frame_block_size_in_kb * 1024;
+        return (int) ByteUnit.KIBI_BYTES.toBytes(conf.native_transport_frame_block_size_in_kb);
     }
 
     public static double getCommitLogSyncGroupWindow()
@@ -2383,7 +2371,7 @@ public class DatabaseDescriptor
 
     public static long getMaxHintsFileSize()
     {
-        return conf.max_hints_file_size_in_mb * 1024L * 1024L;
+        return  ByteUnit.MEBI_BYTES.toBytes(conf.max_hints_file_size_in_mb);
     }
 
     public static ParameterizedClass getHintsCompression()
@@ -3019,5 +3007,47 @@ public class DatabaseDescriptor
     public static void setCommitLogSegmentMgrProvider(Function<CommitLog, AbstractCommitLogSegmentManager> provider)
     {
         commitLogSegmentMgrProvider = provider;
+    }
+
+    /**
+     * Class that primarily tracks overflow thresholds during conversions
+     */
+    private enum ByteUnit {
+        KIBI_BYTES(2048 * 1024, 1024),
+        MEBI_BYTES(2048, 1024 * 1024);
+
+        private final int overflowThreshold;
+        private final int multiplier;
+
+        ByteUnit(int t, int m)
+        {
+            this.overflowThreshold = t;
+            this.multiplier = m;
+        }
+
+        public int overflowThreshold()
+        {
+            return overflowThreshold;
+        }
+
+        public boolean willOverflowInBytes(int val)
+        {
+            return val >= overflowThreshold;
+        }
+
+        public long toBytes(int val)
+        {
+            return val * multiplier;
+        }
+    }
+
+    /**
+     * Ensures passed in configuration value is positive and will not overflow when converted to Bytes
+     */
+    private static void checkValidForByteConversion(int val, final String name, final ByteUnit unit)
+    {
+        if (val < 0 || unit.willOverflowInBytes(val))
+            throw new ConfigurationException(String.format("%s must be positive value < %d, but was %d",
+                                                           name, unit.overflowThreshold(), val), false);
     }
 }
