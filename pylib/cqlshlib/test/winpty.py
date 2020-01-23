@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from threading import Thread
-from six.moves import cStringIO as StringIO
+from six import StringIO
 from six.moves.queue import Queue, Empty
 
 

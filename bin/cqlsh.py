@@ -47,11 +47,6 @@ from contextlib import contextmanager
 from glob import glob
 from uuid import UUID
 
-from six.moves import configparser
-from six.moves import cStringIO as StringIO
-from six.moves import input
-from six import ensure_text
-
 if sys.version_info.major != 3 and (sys.version_info.major == 2 and sys.version_info.minor != 7):
     sys.exit("\nCQL Shell supports only Python 3 or Python 2.7\n")
 
@@ -145,6 +140,11 @@ for lib in third_parties:
         sys.path.insert(0, lib_zip)
 
 import six
+
+from six.moves import configparser
+from six import StringIO
+from six.moves import input
+from six import ensure_text, ensure_str
 
 warnings.filterwarnings("ignore", r".*blist.*")
 try:
@@ -762,7 +762,7 @@ class Shell(cmd.Cmd):
         partition_key_columns.sort(key=lambda t: t[0])
         clustering_columns.sort(key=lambda t: t[0])
 
-        table.partition_key  = map(lambda t: t[1], partition_key_columns)
+        table.partition_key = map(lambda t: t[1], partition_key_columns)
         table.clustering_key = map(lambda t: t[1], clustering_columns)
 
     def get_keyspaces(self):
@@ -905,14 +905,14 @@ class Shell(cmd.Cmd):
                 else:
                     readline.parse_and_bind(self.completekey + ": complete")
         # start coverage collection if requested, unless in subshell
-        if self.coverage == True and not self.is_subshell:
+        if self.coverage and not self.is_subshell:
             # check for coveragerc file, write it if missing
             if os.path.exists(HISTORY_DIR):
                 self.coveragerc_path = os.path.join(HISTORY_DIR, '.coveragerc')
                 covdata_path = os.path.join(HISTORY_DIR, '.coverage')
                 if not os.path.isfile(self.coveragerc_path):
                     with open(self.coveragerc_path, 'w') as f:
-                        f.writelines(["[run]\n", 
+                        f.writelines(["[run]\n",
                                       "concurrency = multiprocessing\n",
                                       "data_file = {}\n".format(covdata_path),
                                       "parallel = true\n"]
@@ -1079,7 +1079,7 @@ class Shell(cmd.Cmd):
         self.tracing_enabled = tracing_was_enabled
 
     def perform_statement(self, statement):
-        statement = ensure_text(statement)
+        statement = ensure_str(statement)
 
         stmt = SimpleStatement(statement, consistency_level=self.consistency_level, serial_consistency_level=self.serial_consistency_level, fetch_size=self.page_size if self.use_paging else None)
         success, future = self.perform_simple_statement(stmt)
@@ -2194,7 +2194,7 @@ class Shell(cmd.Cmd):
             text = "{}".format(text)
 
         to_write = self.applycolor(text, color) + ('\n' if newline else '')
-        to_write = ensure_text(to_write)
+        to_write = ensure_str(to_write)
         out.write(to_write)
 
     def flush_output(self):
