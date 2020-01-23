@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,8 +81,7 @@ public class ZstdCompressor implements ICompressor
     private ZstdCompressor(int compressionLevel)
     {
         this.compressionLevel = compressionLevel;
-        this.suitableUses = EnumSet.allOf(Uses.class);
-        this.suitableUses.remove(Uses.FAST_COMPRESSION);
+        this.suitableUses = ImmutableSet.of(Uses.GENERAL);
         logger.trace("Creating Zstd Compressor with compression level={}", compressionLevel);
     }
 

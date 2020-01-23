@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,15 +96,14 @@ public class LZ4Compressor implements ICompressor
             {
                 compressor = lz4Factory.highCompressor(compressionLevel);
                 // LZ4HC can be _extremely_ slow to compress, up to 10x slower
-                this.recommendedUses = EnumSet.allOf(Uses.class);
-                this.recommendedUses.remove(Uses.FAST_COMPRESSION);
+                this.recommendedUses = ImmutableSet.of(Uses.GENERAL);;
                 break;
             }
             case LZ4_FAST_COMPRESSOR:
             default:
             {
                 compressor = lz4Factory.fastCompressor();
-                this.recommendedUses = EnumSet.allOf(Uses.class);
+                this.recommendedUses = ImmutableSet.copyOf(EnumSet.allOf(Uses.class));
             }
         }
 

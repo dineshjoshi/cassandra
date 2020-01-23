@@ -25,6 +25,8 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * A Compressor which doesn't actually compress any data. This is useful for either non-compressible data
  * (typically already compressed or encrypted) that you still want block checksums for or for fast writing.
@@ -38,9 +40,7 @@ import java.util.Set;
  */
 public class NoopCompressor implements ICompressor
 {
-    private final Set<Uses> recommendedUses = EnumSet.allOf(Uses.class);
-
-    public static NoopCompressor create(Map<String, String> options)
+    public static NoopCompressor create(Map<String, String> ignored)
     {
         return new NoopCompressor();
     }
@@ -79,10 +79,5 @@ public class NoopCompressor implements ICompressor
     public Set<String> supportedOptions()
     {
         return Collections.emptySet();
-    }
-
-    public Set<Uses> recommendedUses()
-    {
-        return recommendedUses;
     }
 }

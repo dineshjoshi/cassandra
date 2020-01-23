@@ -30,6 +30,8 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
+import com.google.common.collect.ImmutableSet;
+
 public class DeflateCompressor implements ICompressor
 {
     public static final DeflateCompressor instance = new DeflateCompressor();
@@ -76,8 +78,7 @@ public class DeflateCompressor implements ICompressor
                 return new Inflater();
             }
         };
-        suitableUses = EnumSet.allOf(Uses.class);
-        suitableUses.remove(Uses.FAST_COMPRESSION);
+        suitableUses = ImmutableSet.of(Uses.GENERAL);
     }
 
     public Set<String> supportedOptions()
