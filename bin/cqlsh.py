@@ -628,7 +628,7 @@ class Shell(cmd.Cmd):
         # TODO remove after virtual tables are added to connection metadata
         if self.virtual_keyspaces is None:
             self.init_virtual_keyspaces_meta()
-        return list(map(str, list(self.conn.metadata.keyspaces.keys())))
+        return list(map(str, list(self.conn.metadata.keyspaces.keys()) + list(self.virtual_keyspaces.keys())))
 
     def get_columnfamily_names(self, ksname=None):
         if ksname is None:
