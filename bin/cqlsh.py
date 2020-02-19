@@ -448,7 +448,6 @@ class Shell(cmd.Cmd):
                  request_timeout=DEFAULT_REQUEST_TIMEOUT_SECONDS,
                  protocol_version=None,
                  connect_timeout=DEFAULT_CONNECT_TIMEOUT_SECONDS,
-                 # allow_server_port_discovery=False,
                  is_subshell=False):
         cmd.Cmd.__init__(self, completekey=completekey)
         self.hostname = hostname
@@ -464,7 +463,6 @@ class Shell(cmd.Cmd):
         self.tracing_enabled = tracing_enabled
         self.page_size = self.default_page_size
         self.expand_enabled = expand_enabled
-        # self.allow_server_port_discovery = allow_server_port_discovery
         if use_conn:
             self.conn = use_conn
         else:
@@ -477,7 +475,6 @@ class Shell(cmd.Cmd):
                                 load_balancing_policy=WhiteListRoundRobinPolicy([self.hostname]),
                                 control_connection_timeout=connect_timeout,
                                 connect_timeout=connect_timeout,
-                                # allow_server_port_discovery=allow_server_port_discovery,
                                 **kwargs)
         self.owns_connection = not use_conn
 
@@ -1785,7 +1782,6 @@ class Shell(cmd.Cmd):
                          max_trace_wait=self.max_trace_wait, ssl=self.ssl,
                          request_timeout=self.session.default_timeout,
                          connect_timeout=self.conn.connect_timeout,
-                         # allow_server_port_discovery=self.allow_server_port_discovery,
                          is_subshell=True)
         # duplicate coverage related settings in subshell
         if self.coverage:
@@ -2283,7 +2279,6 @@ def read_options(cmdlineargs, environment):
     optvalues.connect_timeout = option_with_default(configs.getint, 'connection', 'timeout', DEFAULT_CONNECT_TIMEOUT_SECONDS)
     optvalues.request_timeout = option_with_default(configs.getint, 'connection', 'request_timeout', DEFAULT_REQUEST_TIMEOUT_SECONDS)
     optvalues.execute = None
-    optvalues.allow_server_port_discovery = option_with_default(configs.getboolean, 'connection', 'allow_server_port_discovery', 'False')
 
     (options, arguments) = parser.parse_args(cmdlineargs, values=optvalues)
 
@@ -2450,7 +2445,6 @@ def main(options, hostname, port):
                       request_timeout=options.request_timeout,
                       connect_timeout=options.connect_timeout,
                       encoding=options.encoding)
-                      # allow_server_port_discovery=options.allow_server_port_discovery)
     except KeyboardInterrupt:
         sys.exit('Connection aborted.')
     except CQL_ERRORS as e:
